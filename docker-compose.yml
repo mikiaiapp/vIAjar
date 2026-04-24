@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-viajar_pass}
       POSTGRES_DB: ${POSTGRES_DB:-viajar_db}
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - /volume1/docker/viajar/db_data:/var/lib/postgresql/data
     networks:
       - viajar_network
 
@@ -19,7 +19,7 @@ services:
     container_name: viajar-redis
     restart: unless-stopped
     volumes:
-      - redis_data:/data
+      - /volume1/docker/viajar/redis_data:/data
     networks:
       - viajar_network
 
@@ -74,9 +74,7 @@ services:
     networks:
       - viajar_network
 
-volumes:
-  db_data:
-  redis_data:
+
 
 networks:
   viajar_network:
