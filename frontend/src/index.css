@@ -1,11 +1,11 @@
 :root {
-  --primary: #8a2be2;
-  --secondary: #ff1493;
-  --bg-color: #0d0e15;
-  --surface-color: rgba(255, 255, 255, 0.05);
-  --surface-border: rgba(255, 255, 255, 0.1);
-  --text-primary: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.7);
+  --primary: #5c6bc0;
+  --secondary: #0288d1;
+  --bg-color: #f8f9fa;
+  --surface-color: rgba(255, 255, 255, 0.7);
+  --surface-border: rgba(0, 0, 0, 0.05);
+  --text-primary: #1a1a2e;
+  --text-secondary: rgba(26, 26, 46, 0.7);
   --gradient: linear-gradient(135deg, var(--primary), var(--secondary));
 }
 
@@ -22,17 +22,17 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   background-image: 
-    radial-gradient(circle at 15% 50%, rgba(138, 43, 226, 0.15), transparent 25%),
-    radial-gradient(circle at 85% 30%, rgba(255, 20, 147, 0.15), transparent 25%);
+    radial-gradient(circle at 15% 50%, rgba(92, 107, 192, 0.1), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(2, 136, 209, 0.1), transparent 25%);
 }
 
 .glass-panel {
   background: var(--surface-color);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--surface-border);
   border-radius: 16px;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
 }
 
 .btn-primary {

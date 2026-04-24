@@ -15,8 +15,8 @@ header {
 }
 
 .logo {
-  height: 50px;
-  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.2));
+  height: 90px;
+  filter: drop-shadow(0 8px 16px rgba(2, 136, 209, 0.25));
   transition: transform 0.3s ease;
 }
 
@@ -65,7 +65,8 @@ main {
 
 .card:hover {
   transform: translateY(-5px);
-  border-color: rgba(255, 255, 255, 0.3);
+  border-color: rgba(2, 136, 209, 0.4);
+  box-shadow: 0 12px 40px rgba(2, 136, 209, 0.1);
 }
 
 .card h3 {
