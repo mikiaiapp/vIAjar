@@ -17,7 +17,7 @@ Este proyecto está preparado para desplegarse de manera automática usando la f
 ### Requisitos Previos en el Synology NAS
 1. Tener instalado **Docker** (Container Manager).
 2. Tener instalado **Portainer**.
-3. Tener los puertos **6666** (Frontend) y **6667** (Opcional, API Backend) libres y mapeados adecuadamente si utilizas un proxy inverso.
+3. Tener los puertos **7070** (Frontend) y **7071** (Opcional, API Backend) libres y mapeados adecuadamente si utilizas un proxy inverso.
 
 ### Pasos para desplegar
 
@@ -36,7 +36,7 @@ Este proyecto está preparado para desplegarse de manera automática usando la f
 
 Portainer descargará el repositorio, construirá las imágenes Docker locales (Frontend y Backend) e iniciará todos los contenedores (`db`, `redis`, `backend`, `worker`, `frontend`).
 
-Una vez terminado, podrás acceder a la aplicación web a través de la IP de tu Synology NAS en el puerto `6666`. (Ejemplo: `http://192.168.1.100:6666`). La documentación de la API estará en el puerto `6667` (`http://192.168.1.100:6667/docs`).
+Una vez terminado, podrás acceder a la aplicación web a través de la IP de tu Synology NAS en el puerto `7070`. (Ejemplo: `http://192.168.1.100:7070`). La documentación de la API estará en el puerto `7071` (`http://192.168.1.100:7071/docs`).
 
 ## ⚙️ Desarrollo Local
 

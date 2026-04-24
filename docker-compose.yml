@@ -38,7 +38,7 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
     ports:
-      - "6667:8000"
+      - "7071:8000"
     networks:
       - viajar_network
 
@@ -70,7 +70,7 @@ services:
     depends_on:
       - backend
     ports:
-      - "6666:80"
+      - "7070:80"
     networks:
       - viajar_network
 
