@@ -31,7 +31,7 @@ Este proyecto está preparado para desplegarse de manera automática usando la f
    - **Repository reference:** `refs/heads/main` (o dejar por defecto).
    - **Compose path:** `docker-compose.yml`
 7. (Opcional pero Recomendado) Activa **Automatic updates** (GitOps) para que Portainer actualice los contenedores automáticamente si subimos nuevo código a GitHub.
-8. En la sección **Environment variables** (Variables de entorno), haz clic en **Load variables from .env file** si Portainer lo soporta, o haz clic en **Add environment variable** e introduce manualmente las claves necesarias descritas en el archivo `.env.template` (ej. `POSTGRES_USER`, `POSTGRES_PASSWORD`, `GEMINI_API_KEY`, etc.).
+8. En la sección **Environment variables** (Variables de entorno), haz clic en **Load variables from .env file** si Portainer lo soporta, o haz clic en **Add environment variable** e introduce manualmente las claves necesarias descritas en el archivo `.env.template` (ej. `POSTGRES_USER`, `POSTGRES_PASSWORD`, etc.).
 9. Haz clic en el botón **Deploy the stack** al final de la página.
 
 Portainer descargará el repositorio, construirá las imágenes Docker locales (Frontend y Backend) e iniciará todos los contenedores (`db`, `redis`, `backend`, `worker`, `frontend`).

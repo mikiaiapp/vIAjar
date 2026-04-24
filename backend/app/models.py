@@ -13,6 +13,11 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
+    # API Keys configurables por el usuario
+    gemini_api_key = Column(String, nullable=True)
+    groq_api_key = Column(String, nullable=True)
+    tavily_api_key = Column(String, nullable=True)
+    
     trips = relationship("Trip", back_populates="owner")
 
 
