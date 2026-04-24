@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: viajar-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-viajar_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-viajar_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-viajar_db}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - viajar_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: viajar-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - viajar_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: viajar-backend
+    restart: unless-stopped
+    depends_on:
+      - db
+      - redis
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-viajar_user}:${POSTGRES_PASSWORD:-viajar_pass}@db:5432/${POSTGRES_DB:-viajar_db}
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    networks:
+      - viajar_network
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: viajar-worker
+    command: celery -A app.worker.celery_app worker --loglevel=info
+    restart: unless-stopped
+    depends_on:
+      - db
+      - redis
+      - backend
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-viajar_user}:${POSTGRES_PASSWORD:-viajar_pass}@db:5432/${POSTGRES_DB:-viajar_db}
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    networks:
+      - viajar_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: viajar-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "6666:80"
+    networks:
+      - viajar_network
+
+volumes:
+  db_data:
+  redis_data:
+
+networks:
+  viajar_network:
+    driver: bridge
