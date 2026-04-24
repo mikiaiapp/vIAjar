@@ -1,122 +1,52 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import './App.css';
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <div className="app-container">
+      <header>
+        <div className="logo-container">
+          {/* Logo copiado al directorio public */}
+          <img src="/logo.png" alt="vIAjar Logo" className="logo" />
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
+        <nav>
+          <button className="btn-primary">Iniciar Sesión</button>
+        </nav>
+      </header>
+
+      <main>
+        <h1 className="hero-title">
+          Tus viajes, <br />
+          <span className="text-gradient">diseñados por IA</span>
+        </h1>
+        
+        <p className="hero-subtitle">
+          Genera guías de viaje completas estilo revista, descubre puntos de interés ocultos 
+          y planifica tus rutas día a día de forma completamente automática.
+        </p>
+
+        <button className="btn-primary" style={{ padding: '16px 32px', fontSize: '1.1rem', marginTop: '1rem' }}>
+          Crear Nuevo Viaje
         </button>
-      </section>
 
-      <div className="ticks"></div>
+        <div className="action-cards">
+          <div className="card glass-panel">
+            <h3 className="text-gradient">🤖 Generación IA</h3>
+            <p>Conecta tus API Keys de Gemini, Groq o Tavily para obtener descripciones ricas y precisas de cada destino.</p>
+          </div>
+          
+          <div className="card glass-panel">
+            <h3 className="text-gradient">🗺️ Mapas y Rutas</h3>
+            <p>Visualiza cada día de tu itinerario en mapas interactivos y optimiza los tiempos de desplazamiento.</p>
+          </div>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+          <div className="card glass-panel">
+            <h3 className="text-gradient">📄 Exportación Premium</h3>
+            <p>Convierte tu itinerario en un PDF con formato de revista profesional, listo para imprimir o llevar en tu móvil.</p>
+          </div>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      </main>
+    </div>
+  );
 }
 
-export default App
+export default App;
