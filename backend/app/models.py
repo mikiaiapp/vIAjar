@@ -38,6 +38,7 @@ class Trip(Base):
     
     owner = relationship("User", back_populates="trips")
     days = relationship("Day", back_populates="trip", cascade="all, delete-orphan", order_by="Day.order")
+    available_pois = relationship("POI", back_populates="trip", cascade="all, delete-orphan")
     logs = relationship("TripLog", back_populates="trip", cascade="all, delete-orphan", order_by="TripLog.created_at")
 
 
@@ -71,6 +72,7 @@ class POI(Base):
     __tablename__ = "pois"
     
     id = Column(Integer, primary_key=True, index=True)
+    trip_id = Column(Integer, ForeignKey("trips.id"))
     name = Column(String, index=True, nullable=False)
     description = Column(Text)
     latitude = Column(Float)
@@ -78,6 +80,7 @@ class POI(Base):
     image_url = Column(String)
     original_source = Column(String) # Fuente original: Tavily, Gemini, Groq, Scraping...
     
+    trip = relationship("Trip", back_populates="available_pois")
     day_pois = relationship("DayPOI", back_populates="poi")
 
 
