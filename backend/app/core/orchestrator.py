@@ -112,6 +112,19 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
             )
             db.add(db_poi)
         
+        # CREAR DÍAS VACÍOS PARA EL TABLERO TRELLO
+        import datetime
+        delta = trip.end_date - trip.start_date
+        for i in range(delta.days + 1):
+            current_date = trip.start_date + datetime.timedelta(days=i)
+            db_day = models.Day(
+                trip_id=trip.id,
+                date=current_date,
+                title=f"Día {i+1}: {current_date.strftime('%d/%m')}",
+                order=i + 1
+            )
+            db.add(db_day)
+
         db.commit()
                 
         trip.status = "completed"

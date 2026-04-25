@@ -23,7 +23,33 @@ class TripResponse(TripCreate):
     
     class Config:
         from_attributes = True
+
+class POIResponse(BaseModel):
+    id: int
+    name: str
+    description: str | None
+    image_url: str | None
+    class Config:
         from_attributes = True
+
+class DayPOIResponse(BaseModel):
+    id: int
+    order: int
+    poi: POIResponse
+    class Config:
+        from_attributes = True
+
+class DayResponse(BaseModel):
+    id: int
+    title: str | None
+    order: int
+    pois: List[DayPOIResponse]
+    class Config:
+        from_attributes = True
+
+class TripDetailResponse(TripResponse):
+    available_pois: List[POIResponse]
+    days: List[DayResponse]
 
 @router.post("", response_model=TripResponse)
 async def create_trip(trip: TripCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
@@ -47,7 +73,7 @@ async def create_trip(trip: TripCreate, db: Session = Depends(get_db), current_u
 async def get_trips(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     return db.query(models.Trip).filter(models.Trip.owner_id == current_user.id).order_by(models.Trip.created_at.desc()).all()
 
-@router.get("/{trip_id}", response_model=TripResponse)
+@router.get("/{trip_id}", response_model=TripDetailResponse)
 async def get_trip(trip_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     trip = db.query(models.Trip).filter(models.Trip.id == trip_id, models.Trip.owner_id == current_user.id).first()
     if not trip:
