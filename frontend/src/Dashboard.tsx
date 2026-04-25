@@ -81,9 +81,9 @@ function Dashboard() {
   return (
     <div className="app-container" style={{ padding: 0 }}>
       <main style={{ alignItems: 'stretch' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-          <h1 className="text-gradient" style={{ fontSize: '2.5rem', margin: 0 }}>Mis Viajes</h1>
-          <button onClick={() => setShowCreateForm(!showCreateForm)} className="btn-primary">
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem', marginBottom: '3rem' }}>
+          <h1 className="text-gradient" style={{ fontSize: '3.5rem', margin: 0, textAlign: 'center' }}>Mis Viajes</h1>
+          <button onClick={() => setShowCreateForm(!showCreateForm)} className="btn-primary" style={{ padding: '0.8rem 2.5rem', fontSize: '1.1rem', borderRadius: '30px' }}>
             {showCreateForm ? 'Cancelar' : '+ Nuevo Itinerario'}
           </button>
         </div>
