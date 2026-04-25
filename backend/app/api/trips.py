@@ -127,12 +127,39 @@ async def move_poi(trip_id: int, poi_id: int, day_id: int | None, is_accommodati
     else:
         db.query(models.DayPOI).filter(models.DayPOI.poi_id == poi_id).delete()
         if day_id:
-            db.add(models.DayPOI(day_id=day_id, poi_id=poi_id, order=1))
+            # Buscar el último orden para este día
+            from sqlalchemy import func
+            max_order = db.query(func.max(models.DayPOI.order)).filter(models.DayPOI.day_id == day_id).scalar() or 0
+            db.add(models.DayPOI(day_id=day_id, poi_id=poi_id, order=max_order + 1))
             poi.status = "assigned"
         else:
             poi.status = "pending"
     
     db.commit()
+    return {"status": "ok"}
+
+@router.post("/{trip_id}/reorder-poi")
+async def reorder_poi(trip_id: int, day_poi_id: int, direction: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    trip = db.query(models.Trip).filter(models.Trip.id == trip_id, models.Trip.owner_id == current_user.id).first()
+    if not trip: raise HTTPException(status_code=404)
+    
+    current = db.query(models.DayPOI).filter(models.DayPOI.id == day_poi_id).first()
+    if not current: raise HTTPException(status_code=404)
+    
+    # Buscar el vecino
+    from sqlalchemy import func
+    if direction == "up":
+        neighbor = db.query(models.DayPOI).filter(models.DayPOI.day_id == current.day_id, models.DayPOI.order < current.order).order_by(models.DayPOI.order.desc()).first()
+    else:
+        neighbor = db.query(models.DayPOI).filter(models.DayPOI.day_id == current.day_id, models.DayPOI.order > current.order).order_by(models.DayPOI.order.asc()).first()
+        
+    if neighbor:
+        # Swap orders
+        old_order = current.order
+        current.order = neighbor.order
+        neighbor.order = old_order
+        db.commit()
+        
     return {"status": "ok"}
 
 @router.post("/{trip_id}/poi/{poi_id}/status")

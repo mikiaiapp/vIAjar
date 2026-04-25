@@ -140,6 +140,18 @@ export default function TripDetail() {
     } catch (e) { console.error(e); }
   };
 
+  const handleReorder = async (dayPoiId: number, direction: 'up' | 'down') => {
+    if (!tripId) return;
+    const token = localStorage.getItem('access_token');
+    try {
+      const res = await fetch(`/api/trips/${tripId}/reorder-poi?day_poi_id=${dayPoiId}&direction=${direction}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) fetchTrip();
+    } catch (e) { console.error(e); }
+  };
+
   const handleSearch = async (query: string) => {
     if (!tripId) return;
     if (!query) return;
@@ -326,9 +338,15 @@ export default function TripDetail() {
             <div style={{ padding: '3rem', flex: 1, overflowY: 'auto' }}>
               <h1 style={{ margin: '0 0 1.5rem 0', fontSize: '2.5rem', fontWeight: '800' }}>{selectedPoi.name}</h1>
               <p style={{ lineHeight: '1.8', color: '#64748b', fontSize: '1.1rem' }}>{selectedPoi.description}</p>
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
-                {selectedPoi.website_url && <a href={selectedPoi.website_url} target="_blank" rel="noreferrer" style={{ background: 'var(--primary)', color: 'white', padding: '1rem 2rem', borderRadius: '12px', fontWeight: '600', textDecoration: 'none' }}>🌐 Web</a>}
-                <div style={{ padding: '1rem 1.5rem', background: '#f1f5f9', borderRadius: '12px', fontSize: '0.9rem', color: '#475569' }}>📍 {selectedPoi.latitude?.toFixed(4)}, {selectedPoi.longitude?.toFixed(4)}</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginTop: '2rem' }}>
+                <button 
+                  onClick={() => handleMovePoi(selectedPoi.id, currentDay.id)}
+                  style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '1rem 2rem', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 15px rgba(2, 136, 209, 0.4)' }}
+                >
+                  📍 Añadir a Planificación
+                </button>
+                {selectedPoi.website_url && <a href={selectedPoi.website_url} target="_blank" rel="noreferrer" style={{ border: '2px solid var(--primary)', color: 'var(--primary)', padding: '1rem 2rem', borderRadius: '12px', fontWeight: '600', textDecoration: 'none', display: 'flex', alignItems: 'center' }}>🌐 Web</a>}
+                <div style={{ padding: '1rem 1.5rem', background: '#f1f5f9', borderRadius: '12px', fontSize: '0.9rem', color: '#475569', display: 'flex', alignItems: 'center' }}>📍 {selectedPoi.latitude?.toFixed(4)}, {selectedPoi.longitude?.toFixed(4)}</div>
               </div>
             </div>
           </div>
@@ -369,10 +387,16 @@ export default function TripDetail() {
           <div onDragOver={e => e.preventDefault()} onDrop={e => handleMovePoi(parseInt(e.dataTransfer.getData('poiId')), currentDay.id)} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#94a3b8' }}>ITINERARIO</label>
             {currentDay.pois.map((dp, idx) => (
-              <div key={dp.id} style={{ background: 'white', padding: '1rem', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
-                <div style={{ width: '24px', height: '24px', background: 'var(--primary)', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem' }}>{idx + 1}</div>
-                <div style={{ flex: 1, fontWeight: '600', fontSize: '0.9rem' }}>{dp.poi.name}</div>
-                <button onClick={() => handleMovePoi(dp.poi.id, null)} style={{ border: 'none', background: '#f1f5f9', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer' }}>✕</button>
+              <div key={dp.id} style={{ background: 'white', padding: '0.8rem 1rem', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '0.8rem', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+                <div style={{ width: '22px', height: '22px', background: 'var(--primary)', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', flexShrink: 0 }}>{idx + 1}</div>
+                <div style={{ flex: 1, fontWeight: '600', fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dp.poi.name}</div>
+                
+                <div style={{ display: 'flex', gap: '2px' }}>
+                  <button onClick={() => handleReorder(dp.id, 'up')} style={{ border: 'none', background: '#f1f5f9', borderRadius: '4px', padding: '2px 4px', cursor: 'pointer', fontSize: '0.7rem' }}>▲</button>
+                  <button onClick={() => handleReorder(dp.id, 'down')} style={{ border: 'none', background: '#f1f5f9', borderRadius: '4px', padding: '2px 4px', cursor: 'pointer', fontSize: '0.7rem' }}>▼</button>
+                </div>
+                
+                <button onClick={() => handleMovePoi(dp.poi.id, null)} style={{ border: 'none', background: '#fee2e2', color: '#ef4444', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', flexShrink: 0, fontSize: '0.7rem' }}>✕</button>
               </div>
             ))}
             {currentDay.pois.length === 0 && <div style={{ textAlign: 'center', padding: '2rem', color: '#cbd5e1' }}>Vacío</div>}

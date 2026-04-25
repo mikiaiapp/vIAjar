@@ -156,6 +156,14 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
         add_log(db, trip.id, f"SÍNTESIS: {len(final_list)} lugares únicos consolidados.", "success")
 
         for p in final_list:
+            # Intentar buscar una imagen que coincida en el bloque (muy básico)
+            poi_image = "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800" # Fallback más variado
+            for res in chunk:
+                if p.get("name", "").lower() in res.get("title", "").lower():
+                    # Si tavily incluyó imágenes en este resultado
+                    # (Tavily a veces pone la imagen en el root de la respuesta, no por resultado)
+                    pass 
+
             db_poi = models.POI(
                 trip_id=trip.id,
                 name=p.get("name"),
@@ -164,7 +172,7 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
                 latitude=p.get("lat"),
                 longitude=p.get("lng"),
                 website_url=p.get("website_url"),
-                image_url="https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1",
+                image_url=poi_image,
                 original_source="Phase 1: Discovery"
             )
             db.add(db_poi)
