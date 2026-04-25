@@ -83,7 +83,7 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
         model = genai.GenerativeModel(model_name)
         
         # Bloques más pequeños para no saturar
-        chunk_size = 10 
+        chunk_size = 8 
         all_processed_pois = []
 
         import time
@@ -94,7 +94,9 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
             prompt = f"""
             Eres un experto guía de viajes. Analiza este BLOQUE de {len(chunk)} candidatos para el destino {trip.destination}.
             OBJETIVO: Identificar PUEBLOS, MONUMENTOS, MUSEOS, MIRADORES, PARQUES NATURALES.
-            REGLAS: EXCLUYE hoteles, restaurantes y gastronomía.
+            REGLAS: 
+            - EXCLUYE hoteles, restaurantes y gastronomía.
+            - DESCRIPCIÓN: Debe ser EXTENSA (mínimo 10-12 líneas) contando historia, curiosidades y por qué es imprescindible.
             
             Responde ÚNICAMENTE con JSON:
             {{ "pois": [ {{ "name": "...", "description": "...", "category": "attraction", "website_url": "...", "lat": 0.0, "lng": 0.0 }} ] }}
@@ -155,14 +157,19 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
         final_list = list(unique_pois.values())
         add_log(db, trip.id, f"SÍNTESIS: {len(final_list)} lugares únicos consolidados.", "success")
 
-        for p in final_list:
-            # Intentar buscar una imagen que coincida en el bloque (muy básico)
-            poi_image = "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800" # Fallback más variado
-            for res in chunk:
-                if p.get("name", "").lower() in res.get("title", "").lower():
-                    # Si tavily incluyó imágenes en este resultado
-                    # (Tavily a veces pone la imagen en el root de la respuesta, no por resultado)
-                    pass 
+        # Intentar recolectar imágenes reales de Tavily para el destino global
+        tavily_images = []
+        try:
+            # Buscamos imágenes específicas para el destino para tener un pool variado
+            img_search = tavily_client.search(query=f"high quality travel photos of attractions and landmarks in {trip.destination}", search_depth="basic", max_results=20, include_images=True)
+            tavily_images = img_search.get("images", [])
+        except: pass
+
+        for idx, p in enumerate(final_list):
+            # Asignar una imagen del pool si no hay una específica
+            poi_image = "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800"
+            if tavily_images:
+                poi_image = tavily_images[idx % len(tavily_images)]
 
             db_poi = models.POI(
                 trip_id=trip.id,

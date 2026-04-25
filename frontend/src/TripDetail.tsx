@@ -291,7 +291,7 @@ export default function TripDetail() {
 
         <div className="content-scroll" style={{ flex: 1, overflowY: 'auto', padding: '1rem', position: 'relative' }}>
           {showMap ? (
-            <div id="map-detail-container" style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 }}></div>
+            <div id="map-detail-container" style={{ width: '100%', height: '100%', borderRadius: '12px' }}></div>
           ) : (
             <div className="vertical-carousel" style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
               {filteredPois.map(poi => (
@@ -345,8 +345,13 @@ export default function TripDetail() {
                 >
                   📍 Añadir a Planificación
                 </button>
-                {selectedPoi.website_url && <a href={selectedPoi.website_url} target="_blank" rel="noreferrer" style={{ border: '2px solid var(--primary)', color: 'var(--primary)', padding: '1rem 2rem', borderRadius: '12px', fontWeight: '600', textDecoration: 'none', display: 'flex', alignItems: 'center' }}>🌐 Web</a>}
-                <div style={{ padding: '1rem 1.5rem', background: '#f1f5f9', borderRadius: '12px', fontSize: '0.9rem', color: '#475569', display: 'flex', alignItems: 'center' }}>📍 {selectedPoi.latitude?.toFixed(4)}, {selectedPoi.longitude?.toFixed(4)}</div>
+                {selectedPoi.website_url && (
+                  <a href={selectedPoi.website_url} target="_blank" rel="noreferrer" 
+                     style={{ background: '#f1f5f9', color: 'var(--primary)', padding: '1rem 2rem', borderRadius: '12px', fontWeight: '700', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    🌐 Información Web
+                  </a>
+                )}
+                <div style={{ padding: '1rem 1.5rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', fontSize: '0.9rem', color: '#475569', display: 'flex', alignItems: 'center' }}>📍 {selectedPoi.latitude?.toFixed(4)}, {selectedPoi.longitude?.toFixed(4)}</div>
               </div>
             </div>
           </div>
@@ -368,7 +373,7 @@ export default function TripDetail() {
 
         <div className="planner-scroll" style={{ flex: 1, padding: '1.5rem', overflowY: 'auto' }}>
           <div style={{ marginBottom: '2rem' }}>
-            <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#94a3b8', display: 'block', marginBottom: '0.5rem' }}>BASE DEL DÍA</label>
+            <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#94a3b8', display: 'block', marginBottom: '0.5rem' }}>ALOJAMIENTO ESTA NOCHE</label>
             <div onDragOver={e => e.preventDefault()} onDrop={e => handleMovePoi(parseInt(e.dataTransfer.getData('poiId')), currentDay.id, true)} style={{ padding: '1.5rem', background: 'white', borderRadius: '20px', border: currentDay.accommodation ? '2px solid #e2e8f0' : '2px dashed #cbd5e1' }}>
               {currentDay.accommodation ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
