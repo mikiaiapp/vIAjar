@@ -59,14 +59,28 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
         add_log(db, trip.id, "GEMINI AI: Documentando puntos de interés y calculando coordenadas...")
         genai.configure(api_key=user.gemini_api_key)
         
-        # Debug: Listar modelos disponibles para ver qué ID es el correcto
+        # Selección dinámica de modelo basada en la lista disponible
+        available_models = []
         try:
-            available_models = [m.name for m in genai.list_models() if "generateContent" in m.supported_generation_methods]
-            add_log(db, trip.id, f"DEBUG: Modelos disponibles en tu API: {', '.join(available_models)[:200]}...")
-        except Exception as e:
-            add_log(db, trip.id, f"DEBUG: No se pudo listar modelos: {str(e)}", "warn")
+            available_models = [m.name.replace("models/", "") for m in genai.list_models() if "generateContent" in m.supported_generation_methods]
+            add_log(db, trip.id, f"DEBUG: Modelos disponibles: {', '.join(available_models)}")
+        except:
+            add_log(db, trip.id, "DEBUG: Error listando modelos, usando fallback.")
 
-        model_name = "gemini-2.0-flash" 
+        # Intentar con una lista de prioridades
+        priority_models = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-2.5-flash", "gemini-pro"]
+        model_name = "gemini-1.5-flash" # Default
+        
+        # Si el usuario tiene modelos específicos, usamos el primero que coincida con nuestra prioridad
+        for pm in priority_models:
+            if pm in available_models:
+                model_name = pm
+                break
+        else:
+            if available_models:
+                model_name = available_models[0]
+
+        add_log(db, trip.id, f"GEMINI AI: Usando modelo '{model_name}'...")
         model = genai.GenerativeModel(model_name)
         
         chunk_size = 20
@@ -131,6 +145,10 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
                 
                 all_processed_pois.extend(valid_pois)
                 add_log(db, trip.id, f"Progreso IA: {len(all_processed_pois)} lugares válidos identificados...")
+                
+                # Pausa para evitar Rate Limit (429)
+                import time
+                time.sleep(2) 
             except Exception as e:
                 add_log(db, trip.id, f"Error procesando bloque {i//chunk_size + 1}: {str(e)}", "warn")
                 continue
