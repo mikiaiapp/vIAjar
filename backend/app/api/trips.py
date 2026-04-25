@@ -173,7 +173,7 @@ async def manual_search(trip_id: int, query: str, db: Session = Depends(get_db),
     import google.generativeai as genai
     import json
     genai.configure(api_key=current_user.gemini_api_key)
-    model = genai.GenerativeModel("gemini-1.5-flash-latest")
+    model = genai.GenerativeModel("gemini-2.0-flash")
     
     context = [{"title": r.get("title"), "snippet": r.get("content")} for r in resp["results"]]
     prompt = f"Analyze these results for '{query}' in {trip.destination}. Extract up to 3 real POIs as JSON: {{'pois': [{{'name': '...', 'description': '...', 'category': '...', 'website_url': '...', 'lat': 0.0, 'lng': 0.0}}]}}. Data: {json.dumps(context)}"
@@ -251,7 +251,7 @@ async def import_pois(trip_id: int, data: List[dict], db: Session = Depends(get_
     import google.generativeai as genai
     import json
     genai.configure(api_key=current_user.gemini_api_key)
-    model = genai.GenerativeModel("gemini-1.5-flash-latest")
+    model = genai.GenerativeModel("gemini-2.0-flash")
 
     added_count = 0
     for item in data:

@@ -66,7 +66,7 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
         except Exception as e:
             add_log(db, trip.id, f"DEBUG: No se pudo listar modelos: {str(e)}", "warn")
 
-        model_name = "gemini-1.5-flash" # Fallback a nombre base
+        model_name = "gemini-2.0-flash" 
         model = genai.GenerativeModel(model_name)
         
         chunk_size = 20
