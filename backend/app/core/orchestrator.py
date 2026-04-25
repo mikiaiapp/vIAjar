@@ -59,7 +59,15 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
         add_log(db, trip.id, "GEMINI AI: Documentando puntos de interés y calculando coordenadas...")
         genai.configure(api_key=user.gemini_api_key)
         
-        model = genai.GenerativeModel("gemini-1.5-flash-latest")
+        # Debug: Listar modelos disponibles para ver qué ID es el correcto
+        try:
+            available_models = [m.name for m in genai.list_models() if "generateContent" in m.supported_generation_methods]
+            add_log(db, trip.id, f"DEBUG: Modelos disponibles en tu API: {', '.join(available_models)[:200]}...")
+        except Exception as e:
+            add_log(db, trip.id, f"DEBUG: No se pudo listar modelos: {str(e)}", "warn")
+
+        model_name = "gemini-1.5-flash" # Fallback a nombre base
+        model = genai.GenerativeModel(model_name)
         
         chunk_size = 20
         all_processed_pois = []
