@@ -82,6 +82,7 @@ class POI(Base):
     longitude = Column(Float)
     image_url = Column(String)
     website_url = Column(String, nullable=True)
+    status = Column(String, default="pending") # pending, assigned, discarded
     original_source = Column(String) # Fuente original: Tavily, Gemini, Groq, Scraping...
     
     trip = relationship("Trip", back_populates="available_pois")

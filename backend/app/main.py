@@ -18,6 +18,7 @@ try:
         conn.execute(text("ALTER TABLE pois ADD COLUMN IF NOT EXISTS category VARCHAR DEFAULT 'attraction';"))
         conn.execute(text("ALTER TABLE pois ADD COLUMN IF NOT EXISTS website_url VARCHAR;"))
         conn.execute(text("ALTER TABLE days ADD COLUMN IF NOT EXISTS accommodation_id INTEGER;"))
+        conn.execute(text("ALTER TABLE pois ADD COLUMN IF NOT EXISTS status VARCHAR DEFAULT 'pending';"))
         conn.commit()
 except Exception as e:
     print("Migración de esquema falló o ya estaba aplicada:", e)

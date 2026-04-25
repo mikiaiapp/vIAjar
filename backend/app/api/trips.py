@@ -33,6 +33,7 @@ class POIResponse(BaseModel):
     latitude: float | None
     longitude: float | None
     website_url: str | None
+    status: str | None
     class Config:
         from_attributes = True
 
@@ -112,7 +113,6 @@ async def delete_trip(trip_id: int, db: Session = Depends(get_db), current_user:
 
 @router.post("/{trip_id}/move-poi")
 async def move_poi(trip_id: int, poi_id: int, day_id: int | None, is_accommodation: bool = False, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    # Verify trip ownership
     trip = db.query(models.Trip).filter(models.Trip.id == trip_id, models.Trip.owner_id == current_user.id).first()
     if not trip: raise HTTPException(status_code=404)
     
@@ -121,15 +121,39 @@ async def move_poi(trip_id: int, poi_id: int, day_id: int | None, is_accommodati
     
     if is_accommodation and day_id:
         day = db.query(models.Day).filter(models.Day.id == day_id).first()
-        if day: day.accommodation_id = poi_id
+        if day: 
+            day.accommodation_id = poi_id
+            poi.status = "assigned"
     else:
-        # Remove from any day it might be in
         db.query(models.DayPOI).filter(models.DayPOI.poi_id == poi_id).delete()
         if day_id:
-            # Move to specific day
-            new_rel = models.DayPOI(day_id=day_id, poi_id=poi_id, order=1)
-            db.add(new_rel)
+            db.add(models.DayPOI(day_id=day_id, poi_id=poi_id, order=1))
+            poi.status = "assigned"
+        else:
+            poi.status = "pending"
     
+    db.commit()
+    return {"status": "ok"}
+
+@router.post("/{trip_id}/poi/{poi_id}/status")
+async def update_poi_status(trip_id: int, poi_id: int, status: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    # Verify trip
+    trip = db.query(models.Trip).filter(models.Trip.id == trip_id, models.Trip.owner_id == current_user.id).first()
+    if not trip: raise HTTPException(status_code=404)
+    
+    poi = db.query(models.POI).filter(models.POI.id == poi_id, models.POI.trip_id == trip_id).first()
+    if not poi: raise HTTPException(status_code=404)
+    
+    if status not in ["pending", "assigned", "discarded"]:
+        raise HTTPException(status_code=400, detail="Invalid status")
+    
+    poi.status = status
+    if status == "discarded" or status == "pending":
+        # Remove from any day if discarded or moved back to pending
+        db.query(models.DayPOI).filter(models.DayPOI.poi_id == poi_id).delete()
+        # Also check if it was an accommodation
+        db.query(models.Day).filter(models.Day.accommodation_id == poi_id).update({models.Day.accommodation_id: None})
+
     db.commit()
     return {"status": "ok"}
 

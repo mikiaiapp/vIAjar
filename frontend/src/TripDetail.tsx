@@ -39,8 +39,9 @@ const TripDetail = () => {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
   const [showMap, setShowMap] = useState(false);
-  const [selectedPoi, setSelectedPoi] = useState<POI | null>(null);
+  const [selectedPoi, setSelectedPoi] = useState<any | null>(null);
   const [currentDayIdx, setCurrentDayIdx] = useState(0);
+  const [filterStatus, setFilterStatus] = useState<'pending' | 'assigned' | 'discarded'>('pending');
   
   const mapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
@@ -55,7 +56,8 @@ const TripDetail = () => {
         const data = await res.json();
         setTrip(data);
         if (data.available_pois?.length > 0 && !selectedPoi) {
-          setSelectedPoi(data.available_pois[0]);
+          const firstPending = data.available_pois.find((p:any) => (p.status || 'pending') === 'pending');
+          setSelectedPoi(firstPending || data.available_pois[0]);
         }
       }
     } catch (e) { console.error(e); }
@@ -77,23 +79,20 @@ const TripDetail = () => {
         markersRef.current.forEach(m => m.remove());
         markersRef.current = [];
 
-        const assignedIds = new Set();
-        trip.days.forEach(d => d.pois.forEach(dp => assignedIds.add(dp.poi.id)));
-
         const coords: any[] = [];
         const allPois = [...(trip.available_pois || [])];
-        trip.days.forEach(d => d.pois.forEach(dp => allPois.push(dp.poi)));
 
         allPois.forEach(poi => {
             if (poi.latitude && poi.longitude) {
-                const isAssigned = assignedIds.has(poi.id);
-                const color = isAssigned ? '#10b981' : '#4f46e5';
+                let color = '#4f46e5'; // Blue (pending)
+                if (poi.status === 'assigned') color = '#10b981'; // Green
+                if (poi.status === 'discarded') color = '#ef4444'; // Red
                 
                 const icon = L.divIcon({
                   className: 'custom-div-icon',
-                  html: `<div style="background-color:${color}; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow:0 2px 4px rgba(0,0,0,0.3)"></div>`,
-                  iconSize: [12, 12],
-                  iconAnchor: [6, 6]
+                  html: `<div style="background-color:${color}; width:14px; height:14px; border-radius:50%; border:2px solid white; box-shadow:0 2px 5px rgba(0,0,0,0.4)"></div>`,
+                  iconSize: [14, 14],
+                  iconAnchor: [7, 7]
                 });
 
                 const marker = L.marker([poi.latitude, poi.longitude], { icon })
@@ -112,6 +111,17 @@ const TripDetail = () => {
         }
     }
   }, [showMap, trip, selectedPoi]);
+
+  const handleStatusUpdate = async (poiId: number, newStatus: string) => {
+    const token = localStorage.getItem('access_token');
+    try {
+      const res = await fetch(`/api/trips/${tripId}/poi/${poiId}/status?status=${newStatus}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) fetchTrip();
+    } catch (e) { console.error(e); }
+  };
 
   const handleMovePoi = async (poiId: number, dayId: number | null, isAccommodation: boolean = false) => {
     const token = localStorage.getItem('access_token');
@@ -194,12 +204,7 @@ const TripDetail = () => {
   if (!trip) return <div className="error-screen" style={{ padding: '4rem', textAlign: 'center' }}>Viaje no encontrado</div>;
 
   const currentDay = trip.days[currentDayIdx];
-  const assignedIds = new Set();
-  trip.days.forEach(d => {
-    d.pois.forEach(dp => assignedIds.add(dp.poi.id));
-    if (d.accommodation) assignedIds.add(d.accommodation.id);
-  });
-  const unassignedPois = trip.available_pois?.filter(p => !assignedIds.has(p.id)) || [];
+  const filteredPois = trip.available_pois?.filter(p => (p.status || 'pending') === filterStatus) || [];
 
   return (
     <div className="trip-engine-wrapper" style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f4f7f9' }}>
@@ -233,16 +238,20 @@ const TripDetail = () => {
 
       <div className="trip-engine" style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
       
-      {/* COLUMNA 1: DESCUBRIMIENTOS / CARUSEL O MAPA */}
+      {/* COLUMNA 1: DESCUBRIMIENTOS (FILTRADOS) */}
       <div className="col-discovery" style={{ width: '350px', display: 'flex', flexDirection: 'column', borderRight: '1px solid rgba(0,0,0,0.05)', background: 'white' }}>
-        <header style={{ padding: '1.5rem', background: 'white', borderBottom: '1px solid rgba(0,0,0,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700' }}>Descubrimientos</h2>
-            <small style={{ color: 'var(--text-secondary)' }}>{unassignedPois.length} disponibles</small>
+        <header style={{ padding: '1rem', borderBottom: '1px solid rgba(0,0,0,0.05)', background: 'white' }}>
+          <div style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '10px', marginBottom: '1rem' }}>
+              <button onClick={() => setFilterStatus('pending')} style={{ flex: 1, padding: '0.5rem', border: 'none', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '700', background: filterStatus === 'pending' ? 'white' : 'transparent', boxShadow: filterStatus === 'pending' ? '0 2px 6px rgba(0,0,0,0.1)' : 'none', color: filterStatus === 'pending' ? 'var(--primary)' : '#64748b', cursor: 'pointer' }}>Pendientes</button>
+              <button onClick={() => setFilterStatus('assigned')} style={{ flex: 1, padding: '0.5rem', border: 'none', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '700', background: filterStatus === 'assigned' ? 'white' : 'transparent', boxShadow: filterStatus === 'assigned' ? '0 2px 6px rgba(0,0,0,0.1)' : 'none', color: filterStatus === 'assigned' ? '#10b981' : '#64748b', cursor: 'pointer' }}>Asignados</button>
+              <button onClick={() => setFilterStatus('discarded')} style={{ flex: 1, padding: '0.5rem', border: 'none', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '700', background: filterStatus === 'discarded' ? 'white' : 'transparent', boxShadow: filterStatus === 'discarded' ? '0 2px 6px rgba(0,0,0,0.1)' : 'none', color: '#ef4444', cursor: 'pointer' }}>Descartados</button>
           </div>
-          <button onClick={() => setShowMap(!showMap)} style={{ border: 'none', background: '#f1f5f9', padding: '0.5rem', borderRadius: '8px', cursor: 'pointer' }}>
-            {showMap ? '📋 Ver Lista' : '🗺️ Ver Mapa'}
-          </button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 style={{ margin: 0, fontSize: '0.9rem', fontWeight: '800', textTransform: 'uppercase', color: '#94a3b8' }}>Descubrimientos</h2>
+            <button onClick={() => setShowMap(!showMap)} style={{ border: 'none', background: 'none', color: 'var(--primary)', fontWeight: '700', fontSize: '0.75rem', cursor: 'pointer' }}>
+              {showMap ? '📋 Lista' : '🗺️ Mapa'}
+            </button>
+          </div>
         </header>
 
         <div className="content-scroll" style={{ flex: 1, overflowY: 'auto', padding: '1rem', position: 'relative' }}>
@@ -250,25 +259,25 @@ const TripDetail = () => {
             <div id="map-detail-container" style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 }}></div>
           ) : (
             <div className="vertical-carousel" style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-              {unassignedPois.map(poi => (
+              {filteredPois.map(poi => (
                 <div key={poi.id} 
                      draggable 
                      onDragStart={e => e.dataTransfer.setData('poiId', poi.id.toString())}
                      onClick={() => setSelectedPoi(poi)}
                      style={{ 
-                       height: '220px', 
+                       height: '180px', 
                        borderRadius: '16px', 
                        overflow: 'hidden', 
                        position: 'relative', 
                        cursor: 'pointer',
                        transition: 'transform 0.2s',
-                       border: selectedPoi?.id === poi.id ? '4px solid var(--primary)' : 'none',
-                       boxShadow: '0 8px 24px rgba(0,0,0,0.12)'
+                       border: selectedPoi?.id === poi.id ? '4px solid var(--primary)' : '1px solid #eee',
+                       boxShadow: selectedPoi?.id === poi.id ? '0 8px 24px rgba(0,0,0,0.12)' : 'none',
+                       opacity: poi.status === 'discarded' ? 0.6 : 1
                      }}>
                   <img src={poi.image_url} onError={(e:any)=>e.target.src='https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '1.5rem 1rem', background: 'linear-gradient(transparent, rgba(0,0,0,0.9))', color: 'white' }}>
-                    <div style={{ fontWeight: '700', fontSize: '1rem', textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>{poi.name}</div>
-                    <div style={{ fontSize: '0.65rem', opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{poi.category}</div>
+                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '1rem', background: 'linear-gradient(transparent, rgba(0,0,0,0.9))', color: 'white' }}>
+                    <div style={{ fontWeight: '700', fontSize: '0.9rem' }}>{poi.name}</div>
                   </div>
                 </div>
               ))}
@@ -283,6 +292,10 @@ const TripDetail = () => {
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <div style={{ height: '350px', width: '100%', position: 'relative' }}>
               <img src={selectedPoi.image_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <div style={{ position: 'absolute', bottom: '1.5rem', right: '1.5rem', display: 'flex', gap: '0.5rem' }}>
+                   {selectedPoi.status !== 'discarded' && <button onClick={() => handleStatusUpdate(selectedPoi.id, 'discarded')} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '10px', fontWeight: '700', fontSize: '0.75rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)' }}>❌ Descartar</button>}
+                   {selectedPoi.status === 'discarded' && <button onClick={() => handleStatusUpdate(selectedPoi.id, 'pending')} style={{ background: '#10b981', color: 'white', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '10px', fontWeight: '700', fontSize: '0.75rem', cursor: 'pointer' }}>🔄 Recuperar</button>}
+              </div>
               <div style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'var(--primary)', color: 'white', padding: '0.5rem 1.2rem', borderRadius: '30px', fontSize: '0.75rem', fontWeight: '700' }}>
                  {selectedPoi.category?.toUpperCase()}
               </div>
