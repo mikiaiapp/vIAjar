@@ -124,6 +124,72 @@ const TripDetail = () => {
     } catch (e) { console.error(e); }
   };
 
+  const handleSearch = async (query: string) => {
+    if (!query) return;
+    const token = localStorage.getItem('access_token');
+    try {
+      const res = await fetch(`/api/trips/${tripId}/search-poi?query=${encodeURIComponent(query)}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) fetchTrip();
+    } catch (e) { console.error(e); }
+  };
+
+  const handleExport = async (format: string) => {
+    const token = localStorage.getItem('access_token');
+    const res = await fetch(`/api/trips/${tripId}/export?format=${format}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (res.ok) {
+      const text = await res.text();
+      const blob = new Blob([text], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `viajar_${trip.title}.${format}`;
+      a.click();
+    }
+  };
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const text = await file.text();
+    let data: any[] = [];
+
+    if (file.name.endsWith('.kml')) {
+      const parser = new DOMParser();
+      const kml = parser.parseFromString(text, "text/xml");
+      const placemarks = kml.getElementsByTagName("Placemark");
+      for (let i = 0; i < placemarks.length; i++) {
+        const name = placemarks[i].getElementsByTagName("name")[0]?.textContent;
+        const coords = placemarks[i].getElementsByTagName("coordinates")[0]?.textContent?.split(",");
+        if (name && coords) {
+          data.push({ name, lng: parseFloat(coords[0]), lat: parseFloat(coords[1]), category: 'attraction' });
+        }
+      }
+    } else if (file.name.endsWith('.csv')) {
+      const lines = text.split('\n').filter(l => l.trim());
+      const headers = lines[0].split(',');
+      for (let i = 1; i < lines.length; i++) {
+        const vals = lines[i].split(',');
+        data.push({ name: vals[0], lat: parseFloat(vals[3]), lng: parseFloat(vals[4]), category: vals[2] || 'attraction' });
+      }
+    } else {
+      data = JSON.parse(text);
+    }
+
+    const token = localStorage.getItem('access_token');
+    await fetch(`/api/trips/${tripId}/import`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    fetchTrip();
+  };
+
   if (loading) return <div className="loading-screen" style={{ padding: '4rem', textAlign: 'center', background: 'white', height: '100vh' }}><h3>Cargando tu próxima aventura...</h3></div>;
   if (!trip) return <div className="error-screen" style={{ padding: '4rem', textAlign: 'center' }}>Viaje no encontrado</div>;
 
@@ -136,7 +202,36 @@ const TripDetail = () => {
   const unassignedPois = trip.available_pois?.filter(p => !assignedIds.has(p.id)) || [];
 
   return (
-    <div className="trip-engine" style={{ display: 'flex', height: '100vh', background: '#f4f7f9', overflow: 'hidden' }}>
+    <div className="trip-engine-wrapper" style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f4f7f9' }}>
+      
+      {/* BARRA SUPERIOR: BUSCADOR Y EXPORT */}
+      <div className="top-bar" style={{ padding: '0.8rem 2rem', background: 'white', borderBottom: '1px solid rgba(0,0,0,0.05)', display: 'flex', gap: '2rem', alignItems: 'center', zIndex: 100 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }} onClick={() => navigate('/dashboard')}>
+           <span style={{ fontSize: '1.2rem' }}>🏠</span>
+        </div>
+        
+        <div style={{ flex: 1, position: 'relative' }}>
+          <input 
+            type="text" 
+            placeholder="🔍 Busca hoteles, restaurantes o monumentos adicionales en Google / TripAdvisor..." 
+            onKeyDown={e => e.key === 'Enter' && handleSearch((e.target as HTMLInputElement).value)}
+            style={{ width: '100%', padding: '0.8rem 1.5rem', borderRadius: '30px', border: '1px solid #e2e8f0', background: '#f8fafc', outline: 'none' }}
+          />
+        </div>
+
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button onClick={() => handleExport('json')} className="btn-mini">JSON</button>
+          <button onClick={() => handleExport('csv')} className="btn-mini">CSV</button>
+          <button onClick={() => handleExport('kml')} className="btn-mini">KML</button>
+          <div style={{ borderLeft: '1px solid #ddd', margin: '0 0.5rem' }}></div>
+          <label className="btn-mini" style={{ background: 'var(--primary)', color: 'white', display: 'inline-block', cursor: 'pointer' }}>
+            ➕ Importar
+            <input type="file" onChange={handleImportFile} style={{ display: 'none' }} accept=".kml,.json,.csv" />
+          </label>
+        </div>
+      </div>
+
+      <div className="trip-engine" style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
       
       {/* COLUMNA 1: DESCUBRIMIENTOS / CARUSEL O MAPA */}
       <div className="col-discovery" style={{ width: '350px', display: 'flex', flexDirection: 'column', borderRight: '1px solid rgba(0,0,0,0.05)', background: 'white' }}>

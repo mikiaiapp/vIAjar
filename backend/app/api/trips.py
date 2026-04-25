@@ -132,3 +132,113 @@ async def move_poi(trip_id: int, poi_id: int, day_id: int | None, is_accommodati
     
     db.commit()
     return {"status": "ok"}
+
+@router.post("/{trip_id}/search-poi")
+async def manual_search(trip_id: int, query: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    # Verify trip
+    trip = db.query(models.Trip).filter(models.Trip.id == trip_id, models.Trip.owner_id == current_user.id).first()
+    if not trip: raise HTTPException(status_code=404)
+    
+    # Solo buscamos 5 resultados para ser rápidos
+    from ..core.orchestrator import TavilyClient
+    tavily_client = TavilyClient(api_key=current_user.tavily_api_key)
+    resp = tavily_client.search(query=f"{query} in {trip.destination}", search_depth="advanced", max_results=5, include_images=True)
+    
+    if not resp.get("results"): return {"status": "no results"}
+
+    import google.generativeai as genai
+    import json
+    genai.configure(api_key=current_user.gemini_api_key)
+    model = genai.GenerativeModel("models/gemini-1.5-flash")
+    
+    context = [{"title": r.get("title"), "snippet": r.get("content")} for r in resp["results"]]
+    prompt = f"Analyze these results for '{query}' in {trip.destination}. Extract up to 3 real POIs as JSON: {{'pois': [{{'name': '...', 'description': '...', 'category': '...', 'website_url': '...', 'lat': 0.0, 'lng': 0.0}}]}}. Data: {json.dumps(context)}"
+    
+    genai_resp = model.generate_content(prompt)
+    txt = genai_resp.text.strip()
+    if "```json" in txt: txt = txt.split("```json")[-1].split("```")[0].strip()
+    elif "```" in txt: txt = txt.split("```")[1].strip()
+    
+    data = json.loads(txt)
+    new_pois = []
+    for p in data.get("pois", []):
+        db_poi = models.POI(
+            trip_id=trip.id,
+            name=p.get("name"),
+            description=p.get("description"),
+            category=p.get("category", "attraction"),
+            latitude=p.get("lat"),
+            longitude=p.get("lng"),
+            website_url=p.get("website_url"),
+            image_url="https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1"
+        )
+        db.add(db_poi)
+        new_pois.append(p)
+    
+    db.commit()
+    return {"status": "ok", "added": len(new_pois)}
+
+@router.get("/{trip_id}/export")
+async def export_trip(trip_id: int, format: str = "json", db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    trip = db.query(models.Trip).filter(models.Trip.id == trip_id, models.Trip.owner_id == current_user.id).first()
+    if not trip: raise HTTPException(status_code=404)
+    
+    all_pois = db.query(models.POI).filter(models.POI.trip_id == trip_id).all()
+    
+    if format == "csv":
+        import io, csv
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["Name", "Description", "Category", "Latitude", "Longitude", "Website"])
+        for p in all_pois:
+            writer.writerow([p.name, p.description, p.category, p.latitude, p.longitude, p.website_url])
+        return output.getvalue()
+    
+    elif format == "kml":
+        kml = f'<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>{trip.title}</name>'
+        for p in all_pois:
+            kml += f'<Placemark><name>{p.name}</name><description>{p.description}</description><Point><coordinates>{p.longitude},{p.latitude},0</coordinates></Point></Placemark>'
+        kml += '</Document></kml>'
+        return kml
+
+    return [{"name": p.name, "lat": p.latitude, "lng": p.longitude, "cat": p.category} for p in all_pois]
+
+@router.post("/{trip_id}/import")
+async def import_pois(trip_id: int, data: List[dict], db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    trip = db.query(models.Trip).filter(models.Trip.id == trip_id, models.Trip.owner_id == current_user.id).first()
+    if not trip: raise HTTPException(status_code=404)
+    
+    existing_names = {p.name.lower() for p in db.query(models.POI).filter(models.POI.trip_id == trip_id).all()}
+    
+    import google.generativeai as genai
+    import json
+    genai.configure(api_key=current_user.gemini_api_key)
+    model = genai.GenerativeModel("models/gemini-1.5-flash")
+
+    added_count = 0
+    for item in data:
+        name = item.get("name", "POI Importado")
+        if name.lower() in existing_names: continue
+        
+        # Enriquecimiento básico con IA para los importados
+        description = "Lugar importado."
+        try:
+            enrich_prompt = f"Dame una descripción breve (3 líneas) y cautivadora para el lugar '{name}' en {trip.destination}. Devuelve solo la descripción."
+            resp = model.generate_content(enrich_prompt)
+            description = resp.text.strip()
+        except: pass
+
+        new_poi = models.POI(
+            trip_id=trip_id,
+            name=name,
+            latitude=item.get("lat"),
+            longitude=item.get("lng"),
+            category=item.get("category", "attraction"),
+            description=description,
+            image_url="https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1"
+        )
+        db.add(new_poi)
+        added_count += 1
+    
+    db.commit()
+    return {"status": "ok", "imported": added_count}
