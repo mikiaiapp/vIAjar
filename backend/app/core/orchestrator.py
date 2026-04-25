@@ -30,20 +30,30 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
 
     try:
         # FASE 1: EXTRACTION (Tavily)
-        add_log(db, trip.id, f"TAVILY AI: Extrayendo Puntos de Interés (POI) relevantes en {trip.destination}...")
+        target_pois = max(15, duration * 3) # Minimo 15, o 3 por dia
+        add_log(db, trip.id, f"TAVILY AI: Extrayendo ~{target_pois} Puntos de Interés (POI) relevantes en {trip.destination}...")
         
         tavily_client = TavilyClient(api_key=user.tavily_api_key)
-        tavily_resp = tavily_client.search(
-            query=f"puntos de interés en {trip.destination}",
-            search_depth="advanced",
-            include_images=True,
-            include_raw_content=False,
-            max_results=30
-        )
+        try:
+            tavily_resp = tavily_client.search(
+                query=f"Los sitios turísticos más importantes, secretos mejor guardados y atracciones en {trip.destination}",
+                search_depth="advanced",
+                include_images=True,
+                include_raw_content=False,
+                max_results=target_pois
+            )
+        except Exception as e:
+            # Fallback en caso de que falle la profundidad avanzada o el límite
+            add_log(db, trip.id, f"TAVILY AI: Error en búsqueda avanzada. Reintentando búsqueda básica... ({str(e)})", "warning")
+            tavily_resp = tavily_client.search(
+                query=f"puntos turisticos {trip.destination}",
+                search_depth="basic",
+                max_results=target_pois
+            )
         
         pois_data = tavily_resp.get("results", [])
         if not pois_data:
-            raise Exception("Tavily no devolvió ningún resultado.")
+            raise Exception("Tavily no devolvió ningún resultado. Es posible que el destino sea muy poco común o la cuota esté agotada.")
             
         # Asignar un ID a cada POI y preparar diccionarios separados
         tavily_context_map = {}
@@ -53,13 +63,10 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
             poi_id = f"poi_{idx}"
             tavily_context_map[poi_id] = {
                 "name": p.get("title", ""),
-                "description": p.get("content", "")[:300],
+                "description": p.get("content", "")[:350],
                 "url": p.get("url", ""),
-                # Si Tavily trae imágenes en el futuro real, o guardarla genérica
                 "image_url": "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1"
             }
-            # Simular extracción geo (Tavily no siempre lo da perfecto sin raw, 
-            # pero le pasamos los keys a Groq para que entienda que es proximidad)
             groq_geo_list.append({
                 "id": poi_id,
                 "name": p.get("title", "")
@@ -89,19 +96,36 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
         
         best_model = "llama-3.3-70b-versatile" # Preferencia absoluta
         if best_model not in active_model_ids:
-            # Buscar alternativas Llama válidas (priorizar grandes o instruccionales)
-            fallback_models = [m for m in active_model_ids if "llama" in m.lower() and ("70b" in m.lower() or "3.1" in m.lower())]
+            fallback_models = [m for m in active_model_ids if "llama" in m.lower() and ("70b" in m.lower() or "3.1" in m.lower() or "3.3" in m.lower())]
             best_model = fallback_models[0] if fallback_models else active_model_ids[-1]
-            add_log(db, trip.id, f"GROQ AI: Modelo preferido no disponible. Usando fallback automático: {best_model}", "warning")
+            add_log(db, trip.id, f"GROQ AI: Modelo preferido no disponible. Usando fallback: {best_model}", "warning")
 
-        groq_chat = groq_client.chat.completions.create(
-            messages=[{"role": "user", "content": groq_prompt}],
-            model=best_model,
-            temperature=0.1,
-            response_format={"type": "json_object"}
-        )
-        groq_output_raw = groq_chat.choices[0].message.content
-        groq_clustering = json.loads(groq_output_raw)
+        try:
+            groq_chat = groq_client.chat.completions.create(
+                messages=[{"role": "user", "content": groq_prompt}],
+                model=best_model,
+                temperature=0.1,
+                response_format={"type": "json_object"}
+            )
+            groq_output_raw = groq_chat.choices[0].message.content
+        except Exception as e:
+            add_log(db, trip.id, f"GROQ AI Error: Fallo estructurando json. Reintentando sin formato estricto... ({str(e)})", "warning")
+            groq_chat = groq_client.chat.completions.create(
+                messages=[{"role": "user", "content": groq_prompt}],
+                model=best_model,
+                temperature=0.1
+            )
+            groq_output_raw = groq_chat.choices[0].message.content
+
+        # Si Groq devuele markdown (```json ... ```), lo limpiamos antes de parsear
+        if "```json" in groq_output_raw:
+            groq_output_str = groq_output_raw.split("```json")[-1].split("```")[0].strip()
+        elif "```" in groq_output_raw:
+            groq_output_str = groq_output_raw.split("```")[1].strip()
+        else:
+            groq_output_str = groq_output_raw.strip()
+            
+        groq_clustering = json.loads(groq_output_str)
         
         add_log(db, trip.id, "GROQ AI: Mapeo geográfico de rutas finalizado con éxito.", "success")
 
@@ -110,7 +134,24 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
         add_log(db, trip.id, "GEMINI AI: Redactando guías con estilo vibrante, efecto sorpresa y toques italianos...")
         
         genai.configure(api_key=user.gemini_api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        # Buscar el modelo Gemini de forma dinámica (equivalente a groq fallback)
+        available_gemini_models = []
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                available_gemini_models.append(m.name)
+        
+        target_gemini = "models/gemini-1.5-flash"
+        if target_gemini not in available_gemini_models and "gemini-1.5-flash" not in available_gemini_models:
+            # Fallback a lo que haya (ej. gemini-pro, gemini-1.5-pro, etc)
+            flash_models = [m for m in available_gemini_models if "flash" in m.lower()]
+            pro_models = [m for m in available_gemini_models if "pro" in m.lower()]
+            if flash_models: target_gemini = flash_models[-1]
+            elif pro_models: target_gemini = pro_models[-1]
+            else: target_gemini = available_gemini_models[-1] if available_gemini_models else "models/gemini-1.5-flash"
+            add_log(db, trip.id, f"GEMINI AI: Modelo preferido no encontrado. Usando fallback {target_gemini}", "warning")
+
+        model = genai.GenerativeModel(target_gemini)
         
         gemini_prompt = f"""
         Actúa como un escritor de guías de viaje increíblemente carismático (con un estilo entusiasta, toques de la dolce vita italiana, y siempre guardando "efectos sorpresa").
