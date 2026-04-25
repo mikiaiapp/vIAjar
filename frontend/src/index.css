@@ -1,7 +1,7 @@
 :root {
   --primary: #0288d1; /* Azul vibrante del logo */
   --secondary: #00d2ff; /* Cian brillante del 'vIA' */
-  --bg-color: #f8f9fa;
+  --bg-color: #f1f5f9;
   --surface-color: rgba(255, 255, 255, 0.7);
   --surface-border: rgba(0, 0, 0, 0.05);
   --text-primary: #002b5c; /* Azul oscuro del 'jar' */

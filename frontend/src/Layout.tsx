@@ -19,7 +19,7 @@ function Layout({ children }: { children: React.ReactNode }) {
   const closeMenu = () => setIsMobileMenuOpen(false);
 
   return (
-    <div className="app-layout" style={{ display: 'flex', minHeight: '100vh', background: '#f4f7f9' }}>
+    <div className="app-layout" style={{ display: 'flex', minHeight: '100vh', background: '#f1f5f9' }}>
       
       {/* Botón Flotante para Móvil */}
       <button 
@@ -62,18 +62,18 @@ function Layout({ children }: { children: React.ReactNode }) {
         display: 'flex', 
         flexDirection: 'column', 
         gap: '3rem',
-        borderRight: '1px solid rgba(0, 0, 0, 0.03)',
+        borderRight: '1px solid rgba(0, 0, 0, 0.05)',
         position: 'sticky',
         top: 0,
         height: '100vh',
         boxSizing: 'border-box',
-        background: '#f4f7f9',
+        background: '#f1f5f9',
         zIndex: 1000,
         transition: 'transform 0.3s ease'
       }}>
-        <div style={{ padding: '0 0.5rem', textAlign: 'center' }}>
+        <div style={{ padding: '0', textAlign: 'center' }}>
           <Link to="/" onClick={closeMenu}>
-            <img src="/logo.png" alt="vIAjar Logo" style={{ width: '100%', maxWidth: '220px', mixBlendMode: 'multiply' }} />
+            <img src="/logo.png" alt="vIAjar Logo" style={{ width: '100%', maxWidth: '240px' }} />
           </Link>
         </div>
 
