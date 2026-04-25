@@ -142,33 +142,41 @@ function Profile() {
              </div>
              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Configura tus propias claves para generar el contenido.</p>
              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
-                <label>Gemini API Key
-                  <input 
-                    type={isEditingKeys ? "text" : "password"} 
-                    value={keysForm.gemini_api_key} 
-                    onChange={e => setKeysForm({...keysForm, gemini_api_key: e.target.value})}
-                    readOnly={!isEditingKeys} 
-                    style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--surface-border)', opacity: isEditingKeys ? 1 : 0.7 }} 
-                  />
+                <label style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Gemini API Key</span>
+                  <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" style={{ fontSize: '0.8rem', color: 'var(--primary)', textDecoration: 'none' }}>Obtener clave ↗</a>
                 </label>
-                <label>Groq API Key
-                  <input 
-                    type={isEditingKeys ? "text" : "password"} 
-                    value={keysForm.groq_api_key} 
-                    onChange={e => setKeysForm({...keysForm, groq_api_key: e.target.value})}
-                    readOnly={!isEditingKeys} 
-                    style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--surface-border)', opacity: isEditingKeys ? 1 : 0.7 }} 
-                  />
+                <input 
+                  type={isEditingKeys ? "text" : "password"} 
+                  value={keysForm.gemini_api_key} 
+                  onChange={e => setKeysForm({...keysForm, gemini_api_key: e.target.value})}
+                  readOnly={!isEditingKeys} 
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--surface-border)', opacity: isEditingKeys ? 1 : 0.7 }} 
+                />
+
+                <label style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
+                  <span>Groq API Key</span>
+                  <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" style={{ fontSize: '0.8rem', color: 'var(--primary)', textDecoration: 'none' }}>Obtener clave ↗</a>
                 </label>
-                <label>Tavily API Key (Búsquedas Web)
-                  <input 
-                    type={isEditingKeys ? "text" : "password"} 
-                    value={keysForm.tavily_api_key} 
-                    onChange={e => setKeysForm({...keysForm, tavily_api_key: e.target.value})}
-                    readOnly={!isEditingKeys} 
-                    style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--surface-border)', opacity: isEditingKeys ? 1 : 0.7 }} 
-                  />
+                <input 
+                  type={isEditingKeys ? "text" : "password"} 
+                  value={keysForm.groq_api_key} 
+                  onChange={e => setKeysForm({...keysForm, groq_api_key: e.target.value})}
+                  readOnly={!isEditingKeys} 
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--surface-border)', opacity: isEditingKeys ? 1 : 0.7 }} 
+                />
+
+                <label style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
+                  <span>Tavily API Key (Búsquedas Web)</span>
+                  <a href="https://app.tavily.com/home" target="_blank" rel="noreferrer" style={{ fontSize: '0.8rem', color: 'var(--primary)', textDecoration: 'none' }}>Obtener clave ↗</a>
                 </label>
+                <input 
+                  type={isEditingKeys ? "text" : "password"} 
+                  value={keysForm.tavily_api_key} 
+                  onChange={e => setKeysForm({...keysForm, tavily_api_key: e.target.value})}
+                  readOnly={!isEditingKeys} 
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--surface-border)', opacity: isEditingKeys ? 1 : 0.7 }} 
+                />
              </div>
           </div>
         </div>
