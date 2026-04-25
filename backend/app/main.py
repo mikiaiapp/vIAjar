@@ -13,6 +13,7 @@ try:
     with engine.connect() as conn:
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_2fa_enabled BOOLEAN DEFAULT FALSE;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret VARCHAR;"))
+        conn.execute(text("ALTER TABLE trips ADD COLUMN IF NOT EXISTS status VARCHAR DEFAULT 'planning';"))
         conn.commit()
 except Exception as e:
     print("Migración de esquema falló o ya estaba aplicada:", e)

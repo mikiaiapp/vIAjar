@@ -34,6 +34,7 @@ class Trip(Base):
     is_public = Column(Boolean, default=False)
     owner_id = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    status = Column(String, default="planning")
     
     owner = relationship("User", back_populates="trips")
     days = relationship("Day", back_populates="trip", cascade="all, delete-orphan", order_by="Day.order")
