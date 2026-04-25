@@ -30,20 +30,22 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
 
     try:
         # FASE 1: EXTRACTION (Tavily)
-        target_pois = max(20, duration * 4) # Más ambicioso: 4 por día, mínimo 20
-        add_log(db, trip.id, f"TAVILY AI: Buscando los ~{target_pois} mejores lugares en {trip.destination}...")
+        target_pois = max(30, duration * 4) # Muy optimista: 4 por día, mínimo 30
+        add_log(db, trip.id, f"TAVILY AI: Extrayendo ~{target_pois} Puntos de Interés (POI) en {trip.destination}...")
         
         tavily_client = TavilyClient(api_key=user.tavily_api_key)
         try:
+            # Query más abierta para forzar volumen
+            query = f"Complete list of all must-visit tourist attractions, monuments, museums, squares, parks and landmarks in {trip.destination}. Be very exhaustive."
             tavily_resp = tavily_client.search(
-                query=f"Most interesting places to visit, monuments, hidden gems and best attractions in {trip.destination}. Be exhaustive.",
+                query=query,
                 search_depth="advanced",
                 include_images=True,
                 max_results=target_pois
             )
         except:
             tavily_resp = tavily_client.search(
-                query=f"puntos de interés {trip.destination}",
+                query=f"turismo en {trip.destination}",
                 search_depth="basic",
                 max_results=target_pois
             )
@@ -52,11 +54,11 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
         if not pois_data:
             raise Exception("No se encontraron resultados en Tavily.")
 
-        add_log(db, trip.id, f"TAVILY AI: ¡{len(pois_data)} POIs localizados! Refinando con IA...", "success")
+        add_log(db, trip.id, f"TAVILY AI: ¡{len(pois_data)} POIs localizados! Enriqueciendo datos y coordenadas...", "success")
 
 
-        # FASE DE SÍNTESIS (Gemini) - Sin agrupar por días aún
-        add_log(db, trip.id, "GEMINI AI: Redactando descripciones inmersivas y validando imágenes...")
+        # FASE DE SÍNTESIS (Gemini)
+        add_log(db, trip.id, "GEMINI AI: Redactando guías y localizando coordenadas geográficas...")
         
         genai.configure(api_key=user.gemini_api_key)
         
@@ -65,7 +67,7 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
         for m in genai.list_models():
             if 'generateContent' in m.supported_generation_methods:
                 name = m.name.lower()
-                if "tts" not in name and "embed" not in name and "search" not in name:
+                if all(x not in name for x in ["tts", "embed", "search"]):
                     available_gemini_models.append(m.name)
         
         target_gemini = "models/gemini-1.5-flash"
@@ -74,21 +76,25 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
 
         model = genai.GenerativeModel(target_gemini)
         
-        # Limpiar datos para el prompt
+        # Limpiar datos para el prompt (enviar de 40 en 40 si es muy largo, pero por ahora simplificamos)
         raw_context = [{"title": p.get("title"), "snippet": p.get("content"), "url": p.get("url")} for p in pois_data]
         
         gemini_prompt = f"""
-        Actúa como un guía de viajes experto y con mucha clase (estilo lifestyle italiano). 
+        Actúa como un guía de viajes experto. 
         Toma esta lista de puntos de interés: {json.dumps(raw_context)}.
         
-        Genera un catálogo de estos lugares. Para cada lugar, escribe una descripción cautivadora (máximo 4 líneas) y adjudica si puedes una descripción de por qué es un "Must-Visit".
+        Para CADA lugar de la lista, genera un objeto JSON. 
+        IMPORTANTE: Necesito las coordenadas geográficas (latitud y longitud) estimadas para cada sitio de {trip.destination}.
+        
         Devuelve ÚNICAMENTE un JSON con esta estructura:
         {{
             "pois": [
                 {{
                     "name": "Nombre Real",
-                    "description": "Tu descripción cautivadora",
-                    "image_url": "puedes inventar una de unsplash relacionada si no tienes la real de tavily"
+                    "description": "Descripción cautivadora y completa",
+                    "image_url": "URL de imagen real si tienes o una de unsplash de alta calidad relacionada",
+                    "lat": 0.0,
+                    "lng": 0.0
                 }}
             ]
         }}
@@ -107,12 +113,14 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
                 trip_id=trip.id,
                 name=poi_data.get("name"),
                 description=poi_data.get("description"),
+                latitude=poi_data.get("lat"),
+                longitude=poi_data.get("lng"),
                 image_url=poi_data.get("image_url", "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1"),
                 original_source="Phase 1: Discovery"
             )
             db.add(db_poi)
         
-        # CREAR DÍAS VACÍOS PARA EL TABLERO TRELLO
+        # CREAR DÍAS VACÍOS PARA EL TABLERO
         import datetime
         delta = trip.end_date - trip.start_date
         for i in range(delta.days + 1):
