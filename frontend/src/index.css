@@ -1,12 +1,12 @@
 :root {
-  --primary: #5c6bc0;
-  --secondary: #0288d1;
+  --primary: #0288d1; /* Azul vibrante del logo */
+  --secondary: #00d2ff; /* Cian brillante del 'vIA' */
   --bg-color: #f8f9fa;
   --surface-color: rgba(255, 255, 255, 0.7);
   --surface-border: rgba(0, 0, 0, 0.05);
-  --text-primary: #1a1a2e;
-  --text-secondary: rgba(26, 26, 46, 0.7);
-  --gradient: linear-gradient(135deg, var(--primary), var(--secondary));
+  --text-primary: #002b5c; /* Azul oscuro del 'jar' */
+  --text-secondary: rgba(0, 43, 92, 0.7);
+  --gradient: linear-gradient(135deg, #0288d1, #00d2ff);
 }
 
 * {
@@ -22,8 +22,8 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   background-image: 
-    radial-gradient(circle at 15% 50%, rgba(92, 107, 192, 0.1), transparent 25%),
-    radial-gradient(circle at 85% 30%, rgba(2, 136, 209, 0.1), transparent 25%);
+    radial-gradient(circle at 15% 50%, rgba(2, 136, 209, 0.1), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(0, 210, 255, 0.1), transparent 25%);
 }
 
 .glass-panel {
