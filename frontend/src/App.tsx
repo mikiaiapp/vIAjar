@@ -5,6 +5,7 @@ import Login from './Login';
 import Profile from './Profile';
 import Dashboard from './Dashboard';
 import TripGenerator from './TripGenerator';
+import Layout from './Layout';
 import './App.css';
 
 function App() {
@@ -13,9 +14,9 @@ function App() {
       <Route path="/" element={<Home />} />
       <Route path="/register" element={<Register />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/profile" element={<Profile />} />
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/trip/:tripId/generate" element={<TripGenerator />} />
+      <Route path="/profile" element={<Layout><Profile /></Layout>} />
+      <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
+      <Route path="/trip/:tripId/generate" element={<Layout><TripGenerator /></Layout>} />
     </Routes>
   );
 }

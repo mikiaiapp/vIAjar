@@ -54,16 +54,7 @@ function Dashboard() {
   };
 
   return (
-    <div className="app-container">
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <Link to="/">
-          <img src="/logo.png" alt="vIAjar Logo" style={{ height: '50px' }} />
-        </Link>
-        <Link to="/profile">
-           <button className="btn-primary" style={{ background: 'transparent', color: 'var(--primary)', border: '1px solid var(--primary)' }}>Mi Perfil</button>
-        </Link>
-      </header>
-
+    <div className="app-container" style={{ padding: 0 }}>
       <main style={{ alignItems: 'stretch' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
           <h1 className="text-gradient" style={{ fontSize: '2.5rem', margin: 0 }}>Mis Viajes</h1>

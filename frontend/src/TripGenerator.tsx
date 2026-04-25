@@ -42,16 +42,7 @@ function TripGenerator() {
   };
 
   return (
-    <div className="app-container">
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <Link to="/">
-          <img src="/logo.png" alt="vIAjar Logo" style={{ height: '50px' }} />
-        </Link>
-        <button onClick={() => navigate('/')} className="btn-primary" style={{ background: 'transparent', color: 'var(--primary)', border: '1px solid var(--primary)' }}>
-          ← Volver
-        </button>
-      </header>
-
+    <div className="app-container" style={{ padding: 0 }}>
       <div style={{ maxWidth: '800px', margin: '0 auto' }}>
         <h2 className="text-gradient" style={{ marginBottom: '1rem', fontSize: '2rem' }}>
           Analizando {trip?.destination || 'destino'}...
