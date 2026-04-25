@@ -20,8 +20,14 @@ function Register() {
       });
       
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.detail || 'Error al registrar el usuario');
+        let errMessage = 'Error del servidor (probablemente esté reiniciándose)';
+        try {
+          const data = await response.json();
+          errMessage = data.detail || 'Error al registrar el usuario';
+        } catch (parseErr) {
+          console.error('El servidor no devolvió JSON:', parseErr);
+        }
+        throw new Error(errMessage);
       }
       
       // Auto login o redirigir a login

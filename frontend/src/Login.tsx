@@ -19,8 +19,14 @@ function Login() {
       });
       
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.detail || 'Error de autenticación');
+        let errMessage = 'Error del servidor (probablemente esté reiniciándose)';
+        try {
+          const data = await response.json();
+          errMessage = data.detail || 'Error de autenticación';
+        } catch (parseErr) {
+          console.error('El servidor no devolvió JSON:', parseErr);
+        }
+        throw new Error(errMessage);
       }
       
       const data = await response.json();
