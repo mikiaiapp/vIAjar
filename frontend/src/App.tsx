@@ -4,6 +4,7 @@ import Register from './Register';
 import Login from './Login';
 import Profile from './Profile';
 import Dashboard from './Dashboard';
+import TripGenerator from './TripGenerator';
 import './App.css';
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/profile" element={<Profile />} />
       <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/trip/:tripId/generate" element={<TripGenerator />} />
     </Routes>
   );
 }

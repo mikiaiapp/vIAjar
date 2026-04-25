@@ -37,6 +37,19 @@ class Trip(Base):
     
     owner = relationship("User", back_populates="trips")
     days = relationship("Day", back_populates="trip", cascade="all, delete-orphan", order_by="Day.order")
+    logs = relationship("TripLog", back_populates="trip", cascade="all, delete-orphan", order_by="TripLog.created_at")
+
+
+class TripLog(Base):
+    __tablename__ = "trip_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    trip_id = Column(Integer, ForeignKey("trips.id"))
+    message = Column(String)
+    level = Column(String, default="info") # info, success, warning, error
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    trip = relationship("Trip", back_populates="logs")
 
 
 class Day(Base):

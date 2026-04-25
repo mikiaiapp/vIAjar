@@ -41,9 +41,10 @@ function Dashboard() {
         body: JSON.stringify(newTrip)
       });
       if (res.ok) {
+        const createdTrip = await res.json();
         setShowCreateForm(false);
         setNewTrip({ title: '', destination: '', start_date: '', end_date: '' });
-        fetchTrips();
+        navigate(`/trip/${createdTrip.id}/generate`);
       } else {
         alert("Error creando viaje");
       }
@@ -115,8 +116,8 @@ function Dashboard() {
                   <span>Inicio: {trip.start_date}</span>
                   <span>Fin: {trip.end_date}</span>
                 </div>
-                <button className="btn-primary" style={{ width: '100%', padding: '0.5rem', background: 'transparent', border: '1px solid var(--primary)', color: 'var(--primary)' }}>
-                  Ver Guía
+                <button onClick={() => navigate(`/trip/${trip.id}${trip.status !== 'completed' ? '/generate' : ''}`)} className="btn-primary" style={{ width: '100%', padding: '0.5rem', background: trip.status === 'completed' ? 'var(--primary)' : 'transparent', border: '1px solid var(--primary)', color: trip.status === 'completed' ? 'white' : 'var(--primary)' }}>
+                  {trip.status === 'planning' ? 'Ver Progreso IA' : 'Ver Guía'}
                 </button>
               </div>
             ))}
