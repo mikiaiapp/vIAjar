@@ -85,7 +85,7 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
         
         groq_chat = groq_client.chat.completions.create(
             messages=[{"role": "user", "content": groq_prompt}],
-            model="llama3-8b-8192",
+            model="llama-3.3-70b-versatile",
             temperature=0.1,
             response_format={"type": "json_object"}
         )
