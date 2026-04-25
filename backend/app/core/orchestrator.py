@@ -144,8 +144,18 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
                         add_log(db, trip.id, f"Error en bloque {i//chunk_size + 1}: {str(e)}", "warn")
                         break
 
-        # PERSISTENCIA
+        # DEDUPLICACIÓN Y PERSISTENCIA
+        # Es posible que Tavily encuentre el mismo sitio en búsquedas distintas
+        unique_pois = {}
         for p in all_processed_pois:
+            name_key = p.get("name", "").lower().strip()
+            if name_key and name_key not in unique_pois:
+                unique_pois[name_key] = p
+
+        final_list = list(unique_pois.values())
+        add_log(db, trip.id, f"SÍNTESIS: {len(final_list)} lugares únicos consolidados.", "success")
+
+        for p in final_list:
             db_poi = models.POI(
                 trip_id=trip.id,
                 name=p.get("name"),
@@ -154,7 +164,7 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
                 latitude=p.get("lat"),
                 longitude=p.get("lng"),
                 website_url=p.get("website_url"),
-                image_url="https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1", # Usamos fallback por ahora o intentar mapear de tavily
+                image_url="https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1",
                 original_source="Phase 1: Discovery"
             )
             db.add(db_poi)
@@ -167,9 +177,9 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
             db.add(models.Day(trip_id=trip.id, date=curr, title=f"Día {i+1}: {curr.strftime('%d/%m')}", order=i + 1))
 
         db.commit()
-                
+        
         trip.status = "completed"
-        add_log(db, trip.id, f"¡Fase 1 terminada! Se han descubierto {len(all_processed_pois)} lugares. Ahora puedes organizarlos a tu gusto.", "success")
+        add_log(db, trip.id, f"¡Fase 1 terminada! Se han consolidado {len(final_list)} lugares únicos de interés.", "success")
         db.commit()
 
     except Exception as e:
