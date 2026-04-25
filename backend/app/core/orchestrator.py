@@ -67,11 +67,10 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
         except:
             add_log(db, trip.id, "DEBUG: Error listando modelos, usando fallback.")
 
-        # Intentar con una lista de prioridades
-        priority_models = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-2.5-flash", "gemini-pro"]
-        model_name = "gemini-1.5-flash" # Default
+        # Prioridad a modelos estables (1.5) antes que experimentales (2.0/2.5) que suelen tener cuota 0
+        priority_models = ["gemini-flash-latest", "gemini-1.5-flash", "gemini-pro", "gemini-2.0-flash-lite"]
+        model_name = "gemini-pro" # Fallback conservador
         
-        # Si el usuario tiene modelos específicos, usamos el primero que coincida con nuestra prioridad
         for pm in priority_models:
             if pm in available_models:
                 model_name = pm
@@ -80,78 +79,70 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
             if available_models:
                 model_name = available_models[0]
 
-        add_log(db, trip.id, f"GEMINI AI: Usando modelo '{model_name}'...")
+        add_log(db, trip.id, f"GEMINI AI: Usando modelo '{model_name}' con reintentos...")
         model = genai.GenerativeModel(model_name)
         
-        chunk_size = 20
+        # Bloques más pequeños para no saturar
+        chunk_size = 10 
         all_processed_pois = []
 
+        import time
         for i in range(0, len(all_raw_results), chunk_size):
             chunk = all_raw_results[i:i + chunk_size]
             context = [{"title": p.get("title"), "snippet": p.get("content"), "url": p.get("url")} for p in chunk]
             
             prompt = f"""
             Eres un experto guía de viajes. Analiza este BLOQUE de {len(chunk)} candidatos para el destino {trip.destination}.
+            OBJETIVO: Identificar PUEBLOS, MONUMENTOS, MUSEOS, MIRADORES, PARQUES NATURALES.
+            REGLAS: EXCLUYE hoteles, restaurantes y gastronomía.
             
-            OBJETIVO: Identificar PUEBLOS de interés turístico, MONUMENTOS, MUSEOS, MIRADORES, PARQUES NATURALES y otros puntos de interés (POI).
-            
-            CRÍTICO - REGLAS DE EXCLUSIÓN:
-            - NO incluyas hoteles, hostales, apartamentos, campings ni ningún tipo de alojamiento.
-            - NO incluyas restaurantes, bares, cafeterías ni gastronomía.
-            - Ignóralos por completo. Solo queremos lugares que se "visitan".
-            
-            Para CADA lugar de interés turístico real encontrado en los datos proporcionados:
-            1. NAME: Nombre oficial en español.
-            2. DESCRIPTION: Un párrafo de 5-6 líneas cautivador sobre por qué visitarlo.
-            3. CATEGORY: 'attraction'.
-            4. WEBSITE_URL: Su web oficial o enlace informativo (TripAdvisor, Wikipedia).
-            5. LAT: Latitud decimal (ej: 40.4167).
-            6. LNG: Longitud decimal (ej: -3.7037).
-            
-            IMPORTANTE: Si no tienes coordenadas exactas, intenta estimarlas basándote en el nombre y ciudad.
-            Responde ÚNICAMENTE con un objeto JSON válido.
-            
-            JSON FORMAT:
+            Responde ÚNICAMENTE con JSON:
             {{ "pois": [ {{ "name": "...", "description": "...", "category": "attraction", "website_url": "...", "lat": 0.0, "lng": 0.0 }} ] }}
             
             DATA: {json.dumps(context)}
             """
             
-            try:
-                resp = model.generate_content(prompt)
-                txt = resp.text.strip()
-                
-                # Limpieza de markdown
-                if "```json" in txt:
-                    txt = txt.split("```json")[-1].split("```")[0].strip()
-                elif "```" in txt:
-                    txt = txt.split("```")[1].strip()
-                
-                # Intentar encontrar el primer '{' y el último '}' si falló lo anterior
-                if not (txt.startswith('{') and txt.endswith('}')):
-                    start = txt.find('{')
-                    end = txt.rfind('}')
-                    if start != -1 and end != -1:
-                        txt = txt[start:end+1]
-                
-                data = json.loads(txt)
-                chunk_pois = data.get("pois", [])
-                
-                # Validación básica de datos
-                valid_pois = []
-                for p in chunk_pois:
-                    if p.get("name") and p.get("lat") and p.get("lng"):
-                        valid_pois.append(p)
-                
-                all_processed_pois.extend(valid_pois)
-                add_log(db, trip.id, f"Progreso IA: {len(all_processed_pois)} lugares válidos identificados...")
-                
-                # Pausa para evitar Rate Limit (429)
-                import time
-                time.sleep(2) 
-            except Exception as e:
-                add_log(db, trip.id, f"Error procesando bloque {i//chunk_size + 1}: {str(e)}", "warn")
-                continue
+            # Lógica de reintento con Backoff Exponencial
+            max_retries = 3
+            retry_delay = 5
+            for attempt in range(max_retries):
+                try:
+                    resp = model.generate_content(prompt)
+                    txt = resp.text.strip()
+                    
+                    if "```json" in txt:
+                        txt = txt.split("```json")[-1].split("```")[0].strip()
+                    elif "```" in txt:
+                        txt = txt.split("```")[1].strip()
+                    
+                    if not (txt.startswith('{') and txt.endswith('}')):
+                        start = txt.find('{')
+                        end = txt.rfind('}')
+                        if start != -1 and end != -1:
+                            txt = txt[start:end+1]
+                    
+                    data = json.loads(txt)
+                    chunk_pois = data.get("pois", [])
+                    
+                    valid_pois = []
+                    for p in chunk_pois:
+                        if p.get("name") and p.get("lat") and p.get("lng"):
+                            valid_pois.append(p)
+                    
+                    all_processed_pois.extend(valid_pois)
+                    add_log(db, trip.id, f"Progreso IA: {len(all_processed_pois)} lugares identificados...")
+                    
+                    time.sleep(5) # Pausa entre bloques
+                    break # Éxito, salir del bucle de reintentos
+                    
+                except Exception as e:
+                    if "429" in str(e) or "quota" in str(e).lower():
+                        wait_time = retry_delay * (2 ** attempt)
+                        add_log(db, trip.id, f"Límite de cuota alcanzado. Reintentando en {wait_time}s...", "warn")
+                        time.sleep(wait_time)
+                    else:
+                        add_log(db, trip.id, f"Error en bloque {i//chunk_size + 1}: {str(e)}", "warn")
+                        break
 
         # PERSISTENCIA
         for p in all_processed_pois:
