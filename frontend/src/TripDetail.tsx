@@ -37,13 +37,13 @@ interface Trip {
   days: Day[];
 }
 
-const TripDetail = () => {
+export default function TripDetail() {
   const { tripId } = useParams();
   const navigate = useNavigate();
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
   const [showMap, setShowMap] = useState(false);
-  const [selectedPoi, setSelectedPoi] = useState<any | null>(null);
+  const [selectedPoi, setSelectedPoi] = useState<POI | null>(null);
   const [currentDayIdx, setCurrentDayIdx] = useState(0);
   const [filterStatus, setFilterStatus] = useState<'pending' | 'assigned' | 'discarded'>('pending');
   
@@ -71,7 +71,6 @@ const TripDetail = () => {
 
   useEffect(() => { fetchTrip(); }, [tripId]);
 
-  // Leaflet Sync
   useEffect(() => {
     if (showMap && trip && window.L && !mapRef.current) {
       const L = window.L;
@@ -89,9 +88,9 @@ const TripDetail = () => {
 
         allPois.forEach(poi => {
             if (typeof poi.latitude === 'number' && typeof poi.longitude === 'number') {
-                let color = '#4f46e5'; // Blue (pending)
-                if (poi.status === 'assigned') color = '#10b981'; // Green
-                if (poi.status === 'discarded') color = '#ef4444'; // Red
+                let color = '#4f46e5'; 
+                if (poi.status === 'assigned') color = '#10b981';
+                if (poi.status === 'discarded') color = '#ef4444';
                 
                 const icon = L.divIcon({
                   className: 'custom-div-icon',
@@ -174,10 +173,8 @@ const TripDetail = () => {
   const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
     const text = await file.text();
     let data: any[] = [];
-
     if (file.name.endsWith('.kml')) {
       const parser = new DOMParser();
       const kml = parser.parseFromString(text, "text/xml");
@@ -198,7 +195,6 @@ const TripDetail = () => {
       }
     } else if (file.name.endsWith('.csv')) {
       const lines = text.split('\n').filter(l => l.trim());
-      const headers = lines[0].split(',');
       for (let i = 1; i < lines.length; i++) {
         const vals = lines[i].split(',');
         if (vals[0]) {
@@ -215,7 +211,6 @@ const TripDetail = () => {
     } else {
       data = JSON.parse(text);
     }
-
     const token = localStorage.getItem('access_token');
     if (!tripId) return;
     await fetch(`/api/trips/${tripId}/import`, {
@@ -226,11 +221,11 @@ const TripDetail = () => {
     fetchTrip();
   };
 
-  if (loading) return <div className="loading-screen" style={{ padding: '4rem', textAlign: 'center', background: 'white', height: '100vh' }}><h3>Cargando tu próxima aventura...</h3></div>;
-  if (!trip) return <div className="error-screen" style={{ padding: '4rem', textAlign: 'center' }}>Viaje no encontrado</div>;
+  if (loading) return <div style={{ padding: '4rem', textAlign: 'center', background: 'white', height: '100vh' }}><h3>Cargando tu próxima aventura...</h3></div>;
+  if (!trip) return <div style={{ padding: '4rem', textAlign: 'center' }}>Viaje no encontrado</div>;
 
   const currentDay = trip.days[currentDayIdx];
-  if (!currentDay) return <div className="error-screen" style={{ padding: '4rem', textAlign: 'center' }}>Día no encontrado</div>;
+  if (!currentDay) return <div style={{ padding: '4rem', textAlign: 'center' }}>Día no encontrado</div>;
   
   const filteredPois = trip.available_pois?.filter(p => (p.status || 'pending') === filterStatus) || [];
 
@@ -246,7 +241,7 @@ const TripDetail = () => {
         <div style={{ flex: 1, position: 'relative' }}>
           <input 
             type="text" 
-            placeholder="🔍 Busca hoteles, restaurantes o monumentos adicionales en Google / TripAdvisor..." 
+            placeholder="🔍 Busca hoteles, restaurantes o monumentos adicionales..." 
             onKeyDown={e => e.key === 'Enter' && handleSearch((e.target as HTMLInputElement).value)}
             style={{ width: '100%', padding: '0.8rem 1.5rem', borderRadius: '30px', border: '1px solid #e2e8f0', background: '#f8fafc', outline: 'none' }}
           />
@@ -266,7 +261,7 @@ const TripDetail = () => {
 
       <div className="trip-engine" style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
       
-      {/* COLUMNA 1: DESCUBRIMIENTOS (FILTRADOS) */}
+      {/* COLUMNA 1: DESCUBRIMIENTOS */}
       <div className="col-discovery" style={{ width: '350px', display: 'flex', flexDirection: 'column', borderRight: '1px solid rgba(0,0,0,0.05)', background: 'white' }}>
         <header style={{ padding: '1rem', borderBottom: '1px solid rgba(0,0,0,0.05)', background: 'white' }}>
           <div style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '10px', marginBottom: '1rem' }}>
@@ -303,7 +298,7 @@ const TripDetail = () => {
                        boxShadow: selectedPoi?.id === poi.id ? '0 8px 24px rgba(0,0,0,0.12)' : 'none',
                        opacity: poi.status === 'discarded' ? 0.6 : 1
                      }}>
-                  <img src={poi.image_url} onError={(e:any)=>e.target.src='https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={poi.image_url} onError={(e:any)=>e.target.src='https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt={poi.name} />
                   <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '1rem', background: 'linear-gradient(transparent, rgba(0,0,0,0.9))', color: 'white' }}>
                     <div style={{ fontWeight: '700', fontSize: '0.9rem' }}>{poi.name}</div>
                   </div>
@@ -314,12 +309,12 @@ const TripDetail = () => {
         </div>
       </div>
 
-      {/* COLUMNA 2: DETALLE DEL SELECCIONADO */}
+      {/* COLUMNA 2: DETALLES */}
       <div className="col-details" style={{ flex: 1, background: 'white', display: 'flex', flexDirection: 'column', borderRight: '1px solid rgba(0,0,0,0.05)' }}>
         {selectedPoi ? (
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <div style={{ height: '350px', width: '100%', position: 'relative' }}>
-              <img src={selectedPoi.image_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img src={selectedPoi.image_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt={selectedPoi.name} />
               <div style={{ position: 'absolute', bottom: '1.5rem', right: '1.5rem', display: 'flex', gap: '0.5rem' }}>
                    {selectedPoi.status !== 'discarded' && <button onClick={() => handleStatusUpdate(selectedPoi.id, 'discarded')} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '10px', fontWeight: '700', fontSize: '0.75rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)' }}>❌ Descartar</button>}
                    {selectedPoi.status === 'discarded' && <button onClick={() => handleStatusUpdate(selectedPoi.id, 'pending')} style={{ background: '#10b981', color: 'white', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '10px', fontWeight: '700', fontSize: '0.75rem', cursor: 'pointer' }}>🔄 Recuperar</button>}
@@ -329,94 +324,63 @@ const TripDetail = () => {
               </div>
             </div>
             <div style={{ padding: '3rem', flex: 1, overflowY: 'auto' }}>
-              <div style={{ marginBottom: '0.5rem', color: 'var(--primary)', fontWeight: '700', fontSize: '0.8rem', textTransform: 'uppercase' }}>Explorar Destino</div>
-              <h1 style={{ margin: '0 0 1.5rem 0', fontSize: '2.5rem', fontWeight: '800', lineHeight: 1.1 }}>{selectedPoi.name}</h1>
-              <p style={{ lineHeight: '1.8', color: 'var(--text-secondary)', fontSize: '1.1rem', marginBottom: '2.5rem' }}>{selectedPoi.description}</p>
-              
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                {selectedPoi.website_url && (
-                  <a href={selectedPoi.website_url} target="_blank" rel="noreferrer" style={{ background: 'var(--primary)', color: 'white', padding: '1rem 2rem', borderRadius: '12px', fontWeight: '600', textDecoration: 'none' }}>
-                    🌐 Ver Web / Reservas
-                  </a>
-                )}
-                <div style={{ padding: '1rem 1.5rem', background: '#f1f5f9', borderRadius: '12px', fontSize: '0.9rem', color: '#475569', fontWeight: '500' }}>
-                  📍 {(selectedPoi.latitude as number)?.toFixed(4)}, {(selectedPoi.longitude as number)?.toFixed(4)}
-                </div>
+              <h1 style={{ margin: '0 0 1.5rem 0', fontSize: '2.5rem', fontWeight: '800' }}>{selectedPoi.name}</h1>
+              <p style={{ lineHeight: '1.8', color: '#64748b', fontSize: '1.1rem' }}>{selectedPoi.description}</p>
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+                {selectedPoi.website_url && <a href={selectedPoi.website_url} target="_blank" rel="noreferrer" style={{ background: 'var(--primary)', color: 'white', padding: '1rem 2rem', borderRadius: '12px', fontWeight: '600', textDecoration: 'none' }}>🌐 Web</a>}
+                <div style={{ padding: '1rem 1.5rem', background: '#f1f5f9', borderRadius: '12px', fontSize: '0.9rem', color: '#475569' }}>📍 {selectedPoi.latitude?.toFixed(4)}, {selectedPoi.longitude?.toFixed(4)}</div>
               </div>
             </div>
           </div>
         ) : (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8', fontSize: '1.1rem' }}>
-            Selecciona un lugar a la izquierda para ver su información
-          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8' }}>Selecciona un lugar</div>
         )}
       </div>
 
-      {/* COLUMNA 3: DIARIO (SISTEMA TRELLO OPTIMIZADO) */}
+      {/* COLUMNA 3: PLANIFICADOR */}
       <div className="col-planner" style={{ width: '380px', display: 'flex', flexDirection: 'column', background: '#f8fafc' }}>
-        <header style={{ padding: '1.5rem', background: 'white', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-            <button onClick={() => setCurrentDayIdx(prev => Math.max(0, prev - 1))} style={{ border: 'none', background: '#eff6ff', color: 'var(--primary)', width: '40px', height: '40px', borderRadius: '50%', cursor: 'pointer', fontWeight: 'bold' }}>←</button>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase', color: 'var(--primary)' }}>Planificador Diario</div>
-              <h3 style={{ margin: 0 }}>{currentDay?.title}</h3>
-            </div>
-            <button onClick={() => setCurrentDayIdx(prev => Math.min(trip.days.length - 1, prev + 1))} style={{ border: 'none', background: '#eff6ff', color: 'var(--primary)', width: '40px', height: '40px', borderRadius: '50%', cursor: 'pointer', fontWeight: 'bold' }}>→</button>
+        <header style={{ padding: '1.5rem', background: 'white', borderBottom: '1px solid rgba(0,0,0,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <button onClick={() => setCurrentDayIdx(prev => Math.max(0, prev - 1))} className="btn-circle">{'<'}</button>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '0.7rem', fontWeight: '800', color: 'var(--primary)' }}>PLANIFICADOR</div>
+            <h3 style={{ margin: 0 }}>{currentDay.title}</h3>
           </div>
+          <button onClick={() => setCurrentDayIdx(prev => Math.min(trip.days.length - 1, prev + 1))} className="btn-circle">{'>'}</button>
         </header>
 
         <div className="planner-scroll" style={{ flex: 1, padding: '1.5rem', overflowY: 'auto' }}>
-          
-          <div style={{ marginBottom: '2.5rem' }}>
-            <label style={{ fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase', color: '#94a3b8', display: 'block', marginBottom: '0.8rem' }}>Base del Día (Hotel/Restaurante)</label>
-            <div onDragOver={e => e.preventDefault()}
-                 onDrop={e => handleMovePoi(parseInt(e.dataTransfer.getData('poiId')), currentDay.id, true)}
-                 style={{ 
-                   padding: '1.5rem', background: 'white', borderRadius: '20px', 
-                   border: currentDay.accommodation ? '2px solid #e2e8f0' : '2px dashed #cbd5e1',
-                   boxShadow: currentDay.accommodation ? '0 10px 25px rgba(0,0,0,0.05)' : 'none'
-                 }}>
+          <div style={{ marginBottom: '2rem' }}>
+            <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#94a3b8', display: 'block', marginBottom: '0.5rem' }}>BASE DEL DÍA</label>
+            <div onDragOver={e => e.preventDefault()} onDrop={e => handleMovePoi(parseInt(e.dataTransfer.getData('poiId')), currentDay.id, true)} style={{ padding: '1.5rem', background: 'white', borderRadius: '20px', border: currentDay.accommodation ? '2px solid #e2e8f0' : '2px dashed #cbd5e1' }}>
               {currentDay.accommodation ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                   <div style={{ fontSize: '1.5rem' }}>🏨</div>
-                   <div style={{ flex: 1 }}>
-                     <div style={{ fontWeight: '700', fontSize: '0.95rem' }}>{currentDay.accommodation.name}</div>
-                     <button onClick={() => handleMovePoi(currentDay.accommodation!.id, null, true)} style={{ border: 'none', background: 'none', padding: 0, color: 'var(--primary)', fontSize: '0.7rem', fontWeight: '700', cursor: 'pointer' }}>Quitar Base</button>
-                   </div>
-                   {currentDay.accommodation.website_url && <a href={currentDay.accommodation.website_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', fontSize: '1.2rem' }}>🔗</a>}
+                  <div style={{ fontSize: '1.5rem' }}>🏨</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: '700' }}>{currentDay.accommodation.name}</div>
+                    <button onClick={() => handleMovePoi(currentDay.accommodation?.id || 0, null, true)} style={{ color: 'var(--primary)', border: 'none', background: 'none', fontSize: '0.7rem', cursor: 'pointer' }}>Quitar</button>
+                  </div>
                 </div>
               ) : (
-                <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem' }}>Suelta aquí tu hotel para este día</div>
+                <div style={{ textAlign: 'center', color: '#94a3b8' }}>Arrastra el hotel aquí</div>
               )}
             </div>
           </div>
 
-          <div 
-             onDragOver={e => e.preventDefault()}
-             onDrop={e => handleMovePoi(parseInt(e.dataTransfer.getData('poiId')), currentDay.id)}
-             style={{ display: 'flex', flexDirection: 'column', gap: '1rem', minHeight: '300px' }}>
-            <label style={{ fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase', color: '#94a3b8' }}>Itinerario de Visitas</label>
-            {currentDay.pois.length > 0 ? (
-              currentDay.pois.map((dp, idx) => (
-                <div key={dp.id} className="itinerary-item" style={{ background: 'white', padding: '1rem', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
-                  <div style={{ width: '28px', height: '28px', background: 'var(--primary)', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: '800' }}>{idx + 1}</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>{dp.poi.name}</div>
-                  </div>
-                  <button onClick={() => handleMovePoi(dp.poi.id, null)} style={{ border: 'none', background: '#f1f5f9', color: '#94a3b8', width: '24px', height: '24px', borderRadius: '50%', cursor: 'pointer', fontSize: '0.6rem' }}>✕</button>
-                </div>
-              ))
-            ) : (
-              <div style={{ textAlign: 'center', padding: '4rem 2rem', border: '2px dashed #e2e8f0', borderRadius: '20px', color: '#cbd5e1', fontSize: '0.9rem' }}>
-                No hay actividades planificadas.<br/>Arrastra sitios desde la izquierda.
+          <div onDragOver={e => e.preventDefault()} onDrop={e => handleMovePoi(parseInt(e.dataTransfer.getData('poiId')), currentDay.id)} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#94a3b8' }}>ITINERARIO</label>
+            {currentDay.pois.map((dp, idx) => (
+              <div key={dp.id} style={{ background: 'white', padding: '1rem', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+                <div style={{ width: '24px', height: '24px', background: 'var(--primary)', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem' }}>{idx + 1}</div>
+                <div style={{ flex: 1, fontWeight: '600', fontSize: '0.9rem' }}>{dp.poi.name}</div>
+                <button onClick={() => handleMovePoi(dp.poi.id, null)} style={{ border: 'none', background: '#f1f5f9', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer' }}>✕</button>
               </div>
-            )}
+            ))}
+            {currentDay.pois.length === 0 && <div style={{ textAlign: 'center', padding: '2rem', color: '#cbd5e1' }}>Vacío</div>}
           </div>
         </div>
       </div>
 
-    </div>
+      </div> {/* Final trip-engine */}
+    </div> 
   );
-};
-
-export default TripDetail;
+}
