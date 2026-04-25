@@ -290,9 +290,17 @@ export default function TripDetail() {
         </header>
 
         <div className="content-scroll" style={{ flex: 1, overflowY: 'auto', padding: '1rem', position: 'relative' }}>
-          {showMap ? (
-            <div id="map-detail-container" style={{ width: '100%', height: '100%', borderRadius: '12px' }}></div>
-          ) : (
+          <div 
+            id="map-detail-container" 
+            style={{ 
+              display: showMap ? 'block' : 'none',
+              width: '100%', 
+              height: '100%', 
+              borderRadius: '12px' 
+            }}
+          ></div>
+          
+          {!showMap && (
             <div className="vertical-carousel" style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
               {filteredPois.map(poi => (
                 <div key={poi.id} 
@@ -373,18 +381,18 @@ export default function TripDetail() {
 
         <div className="planner-scroll" style={{ flex: 1, padding: '1.5rem', overflowY: 'auto' }}>
           <div style={{ marginBottom: '2rem' }}>
-            <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#94a3b8', display: 'block', marginBottom: '0.5rem' }}>ALOJAMIENTO ESTA NOCHE</label>
-            <div onDragOver={e => e.preventDefault()} onDrop={e => handleMovePoi(parseInt(e.dataTransfer.getData('poiId')), currentDay.id, true)} style={{ padding: '1.5rem', background: 'white', borderRadius: '20px', border: currentDay.accommodation ? '2px solid #e2e8f0' : '2px dashed #cbd5e1' }}>
-              {currentDay.accommodation ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <div style={{ fontSize: '1.5rem' }}>🏨</div>
+            <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#94a3b8', display: 'block', marginBottom: '0.5rem' }}>DESPERTAR EN...</label>
+            <div style={{ padding: '1.5rem', background: 'rgba(0,0,0,0.03)', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
+              {currentDayIdx > 0 && trip.days[currentDayIdx - 1].accommodation ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', opacity: 0.7 }}>
+                  <div style={{ fontSize: '1.5rem' }}>🏠</div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: '700' }}>{currentDay.accommodation.name}</div>
-                    <button onClick={() => handleMovePoi(currentDay.accommodation?.id || 0, null, true)} style={{ color: 'var(--primary)', border: 'none', background: 'none', fontSize: '0.7rem', cursor: 'pointer' }}>Quitar</button>
+                    <div style={{ fontWeight: '700' }}>{trip.days[currentDayIdx - 1].accommodation?.name}</div>
+                    <div style={{ fontSize: '0.7rem' }}>(Alojamiento noche anterior)</div>
                   </div>
                 </div>
               ) : (
-                <div style={{ textAlign: 'center', color: '#94a3b8' }}>Arrastra el hotel aquí</div>
+                <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '0.8rem' }}>Inicio del viaje</div>
               )}
             </div>
           </div>
@@ -405,6 +413,23 @@ export default function TripDetail() {
               </div>
             ))}
             {currentDay.pois.length === 0 && <div style={{ textAlign: 'center', padding: '2rem', color: '#cbd5e1' }}>Vacío</div>}
+          </div>
+
+          <div style={{ marginTop: '2rem' }}>
+            <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#94a3b8', display: 'block', marginBottom: '0.5rem' }}>DORMIR EN...</label>
+            <div onDragOver={e => e.preventDefault()} onDrop={e => handleMovePoi(parseInt(e.dataTransfer.getData('poiId')), currentDay.id, true)} style={{ padding: '1.5rem', background: 'white', borderRadius: '20px', border: currentDay.accommodation ? '2px solid var(--primary)' : '2px dashed #cbd5e1' }}>
+              {currentDay.accommodation ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{ fontSize: '1.5rem' }}>🛌</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: '700', color: 'var(--primary)' }}>{currentDay.accommodation.name}</div>
+                    <button onClick={() => handleMovePoi(currentDay.accommodation?.id || 0, null, true)} style={{ color: '#ef4444', border: 'none', background: 'none', fontSize: '0.7rem', cursor: 'pointer' }}>Quitar</button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', color: '#94a3b8' }}>Arrastra el hotel de destino aquí</div>
+              )}
+            </div>
           </div>
         </div>
       </div>
