@@ -83,9 +83,20 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
         }}
         """
         
+        # Obtener modelo dinámicamente para evitar modelos desfasados
+        available_models = groq_client.models.list().data
+        active_model_ids = [m.id for m in available_models]
+        
+        best_model = "llama-3.3-70b-versatile" # Preferencia absoluta
+        if best_model not in active_model_ids:
+            # Buscar alternativas Llama válidas (priorizar grandes o instruccionales)
+            fallback_models = [m for m in active_model_ids if "llama" in m.lower() and ("70b" in m.lower() or "3.1" in m.lower())]
+            best_model = fallback_models[0] if fallback_models else active_model_ids[-1]
+            add_log(db, trip.id, f"GROQ AI: Modelo preferido no disponible. Usando fallback automático: {best_model}", "warning")
+
         groq_chat = groq_client.chat.completions.create(
             messages=[{"role": "user", "content": groq_prompt}],
-            model="llama-3.3-70b-versatile",
+            model=best_model,
             temperature=0.1,
             response_format={"type": "json_object"}
         )
