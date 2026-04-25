@@ -64,12 +64,12 @@ function Profile() {
 
   return (
     <div className="app-container">
-      <div className="card glass-panel" style={{ maxWidth: '800px', margin: '2rem auto', padding: '2rem' }}>
+      <div className="card glass-panel" style={{ width: '100%', maxWidth: '800px', margin: '2rem auto', padding: '2rem' }}>
         <h2 className="text-gradient" style={{ marginBottom: '2rem' }}>Configuración de Usuario</h2>
         
         {success && <div style={{ color: 'green', marginBottom: '1rem' }}>{success}</div>}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+        <div className="profile-grid">
           <div>
             <h3>Datos Personales</h3>
             <p><strong>Email:</strong> {user.email}</p>
