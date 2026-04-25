@@ -59,7 +59,7 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
         add_log(db, trip.id, "GEMINI AI: Documentando puntos de interés y calculando coordenadas...")
         genai.configure(api_key=user.gemini_api_key)
         
-        model = genai.GenerativeModel("models/gemini-1.5-flash")
+        model = genai.GenerativeModel("gemini-1.5-flash")
         
         chunk_size = 20
         all_processed_pois = []
