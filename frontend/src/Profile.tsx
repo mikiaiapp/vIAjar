@@ -9,6 +9,9 @@ function Profile() {
   const [success, setSuccess] = useState('');
   const navigate = useNavigate();
 
+  const [isEditingKeys, setIsEditingKeys] = useState(false);
+  const [keysForm, setKeysForm] = useState({ gemini_api_key: '', groq_api_key: '', tavily_api_key: '' });
+
   useEffect(() => {
     fetchUserData();
   }, []);
@@ -29,6 +32,11 @@ function Profile() {
       if (!response.ok) throw new Error('Error al cargar perfil');
       const data = await response.json();
       setUser(data);
+      setKeysForm({
+        gemini_api_key: data.gemini_api_key || '',
+        groq_api_key: data.groq_api_key || '',
+        tavily_api_key: data.tavily_api_key || ''
+      });
     } catch (err: any) {
       setError(err.message);
     }
@@ -44,6 +52,26 @@ function Profile() {
       });
       if (!response.ok) throw new Error('Código inválido');
       setSuccess('2FA habilitado correctamente');
+      fetchUserData();
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  const handleSaveKeys = async () => {
+    const token = localStorage.getItem('access_token');
+    try {
+      const response = await fetch('/api/auth/keys', {
+        method: 'PUT',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify(keysForm)
+      });
+      if (!response.ok) throw new Error('Error al guardar API Keys');
+      setSuccess('API Keys guardadas correctamente');
+      setIsEditingKeys(false);
       fetchUserData();
     } catch (err: any) {
       setError(err.message);
@@ -106,16 +134,41 @@ function Profile() {
           </div>
 
           <div>
-             <h3>Mis API Keys (IA)</h3>
+             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+               <h3>Mis API Keys (IA)</h3>
+               <button onClick={() => isEditingKeys ? handleSaveKeys() : setIsEditingKeys(true)} className="btn-primary" style={{ padding: '8px 16px', fontSize: '0.9rem' }}>
+                 {isEditingKeys ? 'Guardar' : 'Editar'}
+               </button>
+             </div>
              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Configura tus propias claves para generar el contenido.</p>
              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
                 <label>Gemini API Key
-                  <input type="password" value={user.gemini_api_key || ''} readOnly style={{ width: '100%', padding: '0.5rem', opacity: 0.7 }} />
+                  <input 
+                    type={isEditingKeys ? "text" : "password"} 
+                    value={keysForm.gemini_api_key} 
+                    onChange={e => setKeysForm({...keysForm, gemini_api_key: e.target.value})}
+                    readOnly={!isEditingKeys} 
+                    style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--surface-border)', opacity: isEditingKeys ? 1 : 0.7 }} 
+                  />
                 </label>
                 <label>Groq API Key
-                  <input type="password" value={user.groq_api_key || ''} readOnly style={{ width: '100%', padding: '0.5rem', opacity: 0.7 }} />
+                  <input 
+                    type={isEditingKeys ? "text" : "password"} 
+                    value={keysForm.groq_api_key} 
+                    onChange={e => setKeysForm({...keysForm, groq_api_key: e.target.value})}
+                    readOnly={!isEditingKeys} 
+                    style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--surface-border)', opacity: isEditingKeys ? 1 : 0.7 }} 
+                  />
                 </label>
-                <p style={{ fontSize: '0.75rem' }}>* Próximamente podrás editarlas desde aquí.</p>
+                <label>Tavily API Key (Búsquedas Web)
+                  <input 
+                    type={isEditingKeys ? "text" : "password"} 
+                    value={keysForm.tavily_api_key} 
+                    onChange={e => setKeysForm({...keysForm, tavily_api_key: e.target.value})}
+                    readOnly={!isEditingKeys} 
+                    style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--surface-border)', opacity: isEditingKeys ? 1 : 0.7 }} 
+                  />
+                </label>
              </div>
           </div>
         </div>

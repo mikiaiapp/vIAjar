@@ -78,6 +78,19 @@ async def get_current_user(db: Session = Depends(get_db), token: str = Depends(o
 async def read_users_me(current_user: models.User = Depends(get_current_user)):
     return current_user
 
+@router.put("/keys", response_model=schemas.UserResponse)
+async def update_api_keys(keys: schemas.UserUpdateKeys, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if keys.gemini_api_key is not None:
+        current_user.gemini_api_key = keys.gemini_api_key
+    if keys.groq_api_key is not None:
+        current_user.groq_api_key = keys.groq_api_key
+    if keys.tavily_api_key is not None:
+        current_user.tavily_api_key = keys.tavily_api_key
+        
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
 # --- 2FA Endpoints ---
 
 @router.get("/2fa/setup")

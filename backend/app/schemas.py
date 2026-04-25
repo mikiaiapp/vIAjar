@@ -9,6 +9,11 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
 
+class UserUpdateKeys(BaseModel):
+    gemini_api_key: Optional[str] = None
+    groq_api_key: Optional[str] = None
+    tavily_api_key: Optional[str] = None
+
 class UserResponse(UserBase):
     id: int
     is_active: bool

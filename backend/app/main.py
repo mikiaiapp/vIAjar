@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .api import auth
+from .api import auth, trips
 from . import models
 from sqlalchemy import text
 from .database import engine
@@ -28,6 +28,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+app.include_router(trips.router, prefix="/api/trips", tags=["trips"])
 
 @app.get("/")
 def read_root():
