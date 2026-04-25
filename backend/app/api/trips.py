@@ -29,8 +29,10 @@ class POIResponse(BaseModel):
     name: str
     description: str | None
     image_url: str | None
+    category: str | None
     latitude: float | None
     longitude: float | None
+    website_url: str | None
     class Config:
         from_attributes = True
 
@@ -45,6 +47,7 @@ class DayResponse(BaseModel):
     id: int
     title: str | None
     order: int
+    accommodation: POIResponse | None
     pois: List[DayPOIResponse]
     class Config:
         from_attributes = True
@@ -108,7 +111,7 @@ async def delete_trip(trip_id: int, db: Session = Depends(get_db), current_user:
     return None
 
 @router.post("/{trip_id}/move-poi")
-async def move_poi(trip_id: int, poi_id: int, day_id: int | None, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+async def move_poi(trip_id: int, poi_id: int, day_id: int | None, is_accommodation: bool = False, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     # Verify trip ownership
     trip = db.query(models.Trip).filter(models.Trip.id == trip_id, models.Trip.owner_id == current_user.id).first()
     if not trip: raise HTTPException(status_code=404)
@@ -116,13 +119,16 @@ async def move_poi(trip_id: int, poi_id: int, day_id: int | None, db: Session = 
     poi = db.query(models.POI).filter(models.POI.id == poi_id, models.POI.trip_id == trip_id).first()
     if not poi: raise HTTPException(status_code=404)
     
-    # Remove from any day it might be in
-    db.query(models.DayPOI).filter(models.DayPOI.poi_id == poi_id).delete()
-    
-    if day_id:
-        # Move to specific day
-        new_rel = models.DayPOI(day_id=day_id, poi_id=poi_id, order=1)
-        db.add(new_rel)
+    if is_accommodation and day_id:
+        day = db.query(models.Day).filter(models.Day.id == day_id).first()
+        if day: day.accommodation_id = poi_id
+    else:
+        # Remove from any day it might be in
+        db.query(models.DayPOI).filter(models.DayPOI.poi_id == poi_id).delete()
+        if day_id:
+            # Move to specific day
+            new_rel = models.DayPOI(day_id=day_id, poi_id=poi_id, order=1)
+            db.add(new_rel)
     
     db.commit()
     return {"status": "ok"}

@@ -62,9 +62,11 @@ class Day(Base):
     date = Column(Date)
     title = Column(String)
     order = Column(Integer, nullable=False)
+    accommodation_id = Column(Integer, ForeignKey("pois.id"), nullable=True) # Punto base/hotel
     
     trip = relationship("Trip", back_populates="days")
     pois = relationship("DayPOI", back_populates="day", cascade="all, delete-orphan", order_by="DayPOI.order")
+    accommodation = relationship("POI", foreign_keys=[accommodation_id])
 
 
 class POI(Base):
@@ -75,9 +77,11 @@ class POI(Base):
     trip_id = Column(Integer, ForeignKey("trips.id"))
     name = Column(String, index=True, nullable=False)
     description = Column(Text)
+    category = Column(String, default="attraction") # attraction, hotel, restaurant
     latitude = Column(Float)
     longitude = Column(Float)
     image_url = Column(String)
+    website_url = Column(String, nullable=True)
     original_source = Column(String) # Fuente original: Tavily, Gemini, Groq, Scraping...
     
     trip = relationship("Trip", back_populates="available_pois")

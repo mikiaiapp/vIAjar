@@ -29,109 +29,88 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
         duration = 1
 
     try:
-        # FASE 1: EXTRACTION (Tavily)
-        target_pois = max(30, duration * 4) # Muy optimista: 4 por día, mínimo 30
-        add_log(db, trip.id, f"TAVILY AI: Extrayendo ~{target_pois} Puntos de Interés (POI) en {trip.destination}...")
+        # FASE 1: EXTRACTION (Tavily) - Búsquedas múltiples para evitar sesgos
+        target_pois = max(40, duration * 5) 
+        add_log(db, trip.id, f"TAVILY AI: Iniciando rastreo profundo de Atractivos, Hoteles y Restaurantes...")
         
         tavily_client = TavilyClient(api_key=user.tavily_api_key)
-        try:
-            # Query más abierta para forzar volumen
-            query = f"Complete list of all must-visit tourist attractions, monuments, museums, squares, parks and landmarks in {trip.destination}. Be very exhaustive."
-            tavily_resp = tavily_client.search(
-                query=query,
-                search_depth="advanced",
-                include_images=True,
-                max_results=target_pois
-            )
-        except:
-            tavily_resp = tavily_client.search(
-                query=f"turismo en {trip.destination}",
-                search_depth="basic",
-                max_results=target_pois
-            )
+        all_raw_results = []
         
-        pois_data = tavily_resp.get("results", [])
-        if not pois_data:
-            raise Exception("No se encontraron resultados en Tavily.")
+        queries = [
+            f"Best tourist attractions, monuments and secret spots in {trip.destination}",
+            f"Top rated hotels and accommodations in {trip.destination} for travelers",
+            f"Best restaurants and culinary experiences in {trip.destination}"
+        ]
 
-        add_log(db, trip.id, f"TAVILY AI: ¡{len(pois_data)} POIs localizados! Enriqueciendo datos y coordenadas...", "success")
+        for q in queries:
+            try:
+                resp = tavily_client.search(query=q, search_depth="advanced", max_results=target_pois // 2, include_images=True)
+                all_raw_results.extend(resp.get("results", []))
+            except: pass
 
+        if not all_raw_results:
+            raise Exception("No se han podido localizar puntos de interés. Revisa tu clave de Tavily.")
 
-        # FASE DE SÍNTESIS (Gemini)
-        add_log(db, trip.id, "GEMINI AI: Redactando guías y localizando coordenadas geográficas...")
-        
+        add_log(db, trip.id, f"TAVILY AI: Rastreo finalizado. {len(all_raw_results)} candidatos encontrados.", "success")
+
+        # FASE DE SÍNTESIS (Gemini) - Procesamiento por bloques para NO perder datos
+        add_log(db, trip.id, "GEMINI AI: Documentando puntos de interés y calculando coordenadas...")
         genai.configure(api_key=user.gemini_api_key)
         
-        # Filtro de modelos dinámico
-        available_gemini_models = []
-        for m in genai.list_models():
-            if 'generateContent' in m.supported_generation_methods:
-                name = m.name.lower()
-                if all(x not in name for x in ["tts", "embed", "search"]):
-                    available_gemini_models.append(m.name)
+        model = genai.GenerativeModel("models/gemini-1.5-flash")
         
-        target_gemini = "models/gemini-1.5-flash"
-        if target_gemini not in available_gemini_models:
-            target_gemini = available_gemini_models[0] if available_gemini_models else "models/gemini-1.5-flash"
+        # Dividir resultados en bloques de 20 para que Gemini no se sature y los "tire"
+        chunk_size = 20
+        all_processed_pois = []
 
-        model = genai.GenerativeModel(target_gemini)
-        
-        # Limpiar datos para el prompt (enviar de 40 en 40 si es muy largo, pero por ahora simplificamos)
-        raw_context = [{"title": p.get("title"), "snippet": p.get("content"), "url": p.get("url")} for p in pois_data]
-        
-        gemini_prompt = f"""
-        Actúa como un guía de viajes experto. 
-        Toma esta lista de puntos de interés: {json.dumps(raw_context)}.
-        
-        Para CADA lugar de la lista, genera un objeto JSON. 
-        IMPORTANTE: Necesito las coordenadas geográficas (latitud y longitud) estimadas para cada sitio de {trip.destination}.
-        
-        Devuelve ÚNICAMENTE un JSON con esta estructura:
-        {{
-            "pois": [
-                {{
-                    "name": "Nombre Real",
-                    "description": "Descripción cautivadora y completa",
-                    "image_url": "URL de imagen real si tienes o una de unsplash de alta calidad relacionada",
-                    "lat": 0.0,
-                    "lng": 0.0
-                }}
-            ]
-        }}
-        """
-        
-        gemini_resp = model.generate_content(gemini_prompt)
-        gemini_text = gemini_resp.text.strip()
-        if "```json" in gemini_text: gemini_text = gemini_text.split("```json")[-1].split("```")[0].strip()
-        elif "```" in gemini_text: gemini_text = gemini_text.split("```")[1].strip()
+        for i in range(0, len(all_raw_results), chunk_size):
+            chunk = all_raw_results[i:i + chunk_size]
+            context = [{"title": p.get("title"), "snippet": p.get("content"), "url": p.get("url")} for p in chunk]
             
-        final_results = json.loads(gemini_text)
-        
-        # PERSISTENCIA: Todo va al backlog (available_pois)
-        for poi_data in final_results.get("pois", []):
+            prompt = f"""
+            Eres un experto en viajes. Analiza este BLOQUE de {len(chunk)} candidatos para el destino {trip.destination}.
+            Para CADA UNO sin excepción, genera un objeto JSON.
+            Si el lugar parece ser un HOTEL, marca category='hotel'. Si es RESTAURANTE, category='restaurant'. Si es una ATRECCIÓN, category='attraction'.
+            Necesito NOMBRE real, DESCRIPCIÓN completa (5-6 líneas), WEBSITE estimado (Booking/TripAdvisor o su web oficial), y COORDENADAS exactas (lat, lng).
+            
+            JSON FORMAT:
+            {{ "pois": [ {{ "name": "...", "description": "...", "category": "...", "website_url": "...", "lat": 0.0, "lng": 0.0 }} ] }}
+            
+            DATA: {json.dumps(context)}
+            """
+            
+            try:
+                resp = model.generate_content(prompt)
+                txt = resp.text.strip()
+                if "```json" in txt: txt = txt.split("```json")[-1].split("```")[0].strip()
+                elif "```" in txt: txt = txt.split("```")[1].strip()
+                
+                data = json.loads(txt)
+                all_processed_pois.extend(data.get("pois", []))
+                add_log(db, trip.id, f"Progreso IA: {len(all_processed_pois)} / {len(all_raw_results)} procesados...")
+            except: continue
+
+        # PERSISTENCIA
+        for p in all_processed_pois:
             db_poi = models.POI(
                 trip_id=trip.id,
-                name=poi_data.get("name"),
-                description=poi_data.get("description"),
-                latitude=poi_data.get("lat"),
-                longitude=poi_data.get("lng"),
-                image_url=poi_data.get("image_url", "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1"),
+                name=p.get("name"),
+                description=p.get("description"),
+                category=p.get("category", "attraction"),
+                latitude=p.get("lat"),
+                longitude=p.get("lng"),
+                website_url=p.get("website_url"),
+                image_url="https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1", # Usamos fallback por ahora o intentar mapear de tavily
                 original_source="Phase 1: Discovery"
             )
             db.add(db_poi)
         
-        # CREAR DÍAS VACÍOS PARA EL TABLERO
+        # CREAR DÍAS VACÍOS
         import datetime
         delta = trip.end_date - trip.start_date
         for i in range(delta.days + 1):
-            current_date = trip.start_date + datetime.timedelta(days=i)
-            db_day = models.Day(
-                trip_id=trip.id,
-                date=current_date,
-                title=f"Día {i+1}: {current_date.strftime('%d/%m')}",
-                order=i + 1
-            )
-            db.add(db_day)
+            curr = trip.start_date + datetime.timedelta(days=i)
+            db.add(models.Day(trip_id=trip.id, date=curr, title=f"Día {i+1}: {curr.strftime('%d/%m')}", order=i + 1))
 
         db.commit()
                 
