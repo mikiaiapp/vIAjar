@@ -34,7 +34,7 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
         
         tavily_client = TavilyClient(api_key=user.tavily_api_key)
         tavily_resp = tavily_client.search(
-            query=f"Best tourist points of interest and attractions in {trip.destination}. Return specific places, descriptions, and location details.",
+            query=f"puntos de interés en {trip.destination}",
             search_depth="advanced",
             include_images=True,
             include_raw_content=False,
@@ -45,34 +45,41 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
         if not pois_data:
             raise Exception("Tavily no devolvió ningún resultado.")
             
-        # Clean up data specifically for Groq
-        raw_pois_string = json.dumps([{
-            "name": p.get("title", ""),
-            "desc": p.get("content", "")[:200], # Trucante to save tokens
-            "url": p.get("url", "")
-        } for p in pois_data])
-        
-        add_log(db, trip.id, f"TAVILY AI: ¡{len(pois_data)} POIs descubiertos con éxito!", "success")
+        # Asignar un ID a cada POI y preparar diccionarios separados
+        tavily_context_map = {}
+        groq_geo_list = []
 
+        for idx, p in enumerate(pois_data):
+            poi_id = f"poi_{idx}"
+            tavily_context_map[poi_id] = {
+                "name": p.get("title", ""),
+                "description": p.get("content", "")[:300],
+                "url": p.get("url", ""),
+                # Si Tavily trae imágenes en el futuro real, o guardarla genérica
+                "image_url": "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1"
+            }
+            # Simular extracción geo (Tavily no siempre lo da perfecto sin raw, 
+            # pero le pasamos los keys a Groq para que entienda que es proximidad)
+            groq_geo_list.append({
+                "id": poi_id,
+                "name": p.get("title", "")
+            })
+            
+        add_log(db, trip.id, f"TAVILY AI: ¡{len(pois_data)} POIs descubiertos con éxito!", "success")
 
         # FASE 2: OPTIMIZACIÓN LÓGICA (Groq)
         add_log(db, trip.id, f"GROQ AI: Agrupando en {duration} días optimizando el desplazamiento...")
         
         groq_client = Groq(api_key=user.groq_api_key)
         groq_prompt = f"""
-        Actúa como un experto en logística de viajes.
-        Aquí tienes una lista de Puntos de Interés (POIs) en {trip.destination}: {raw_pois_string}.
-        Debes agrupar lógicamente estos POIs en {duration} días, considerando la proximidad implícita y coherencia.
-        No me des explicaciones. DEVUELVE ÚNICAMENTE UN JSON ESTRICTO con el siguiente formato:
+        Actúa como un algoritmo de clustering geo-espacial super-eficiente.
+        Agrupa lógicamente esta lista de Puntos de Interés geográficamente para formar {duration} días de viaje en {trip.destination}.
+        Lista de lugares: {json.dumps(groq_geo_list)}
+        
+        No des explicaciones. Devuelve un JSON ESTRICTO con la distribución usando los IDs:
         {{
-            "itinerary": [
-                {{
-                    "day": 1,
-                    "pois": [
-                        {{ "name": "Nombre POI", "tavily_desc": "Desc..." }}
-                    ]
-                }}
-            ]
+            "Día 1": ["poi_0", "poi_5", "poi_8"],
+            "Día 2": ["poi_1", "poi_2", "poi_7"]
         }}
         """
         
@@ -82,33 +89,38 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
             temperature=0.1,
             response_format={"type": "json_object"}
         )
-        groq_output = groq_chat.choices[0].message.content
+        groq_output_raw = groq_chat.choices[0].message.content
+        groq_clustering = json.loads(groq_output_raw)
         
-        add_log(db, trip.id, "GROQ AI: Estructuración matemática finalizada con éxito.", "success")
+        add_log(db, trip.id, "GROQ AI: Mapeo geográfico de rutas finalizado con éxito.", "success")
 
 
         # FASE 3: SÍNTESIS Y ESTÉTICA (Gemini)
-        add_log(db, trip.id, "GEMINI AI: Redactando guías de usuario e inyectando contexto inmersivo...")
+        add_log(db, trip.id, "GEMINI AI: Redactando guías con estilo vibrante, efecto sorpresa y toques italianos...")
         
         genai.configure(api_key=user.gemini_api_key)
         model = genai.GenerativeModel('gemini-1.5-flash')
         
         gemini_prompt = f"""
-        Toma este itinerario agrupado por días: {groq_output}.
-        Mejora las descripciones de los POIs con un tono inspirador y de revista de viajes.
-        Además, asigna a cada POI una URL de imagen falsa representativa o usa tus fuentes si las sabes.
-        Devuelve ÚNICAMENTE formato JSON:
+        Actúa como un escritor de guías de viaje increíblemente carismático (con un estilo entusiasta, toques de la dolce vita italiana, y siempre guardando "efectos sorpresa").
+        Toma esta estructura de días (creada por otra IA para optimizar desplazamientos):
+        {json.dumps(groq_clustering)}
+        
+        El contexto real (datos extraídos por otra IA) de cada POI está aquí:
+        {json.dumps(tavily_context_map)}
+        
+        Tu trabajo es consolidarlo todo en una guía definitiva. Redacta descripciones maravillosas y cautivadoras para cada sitio basado en su contexto original.
+        Devuelve ÚNICAMENTE este formato JSON estricto (NO uses markdown fuera del JSON):
         {{
             "days": [
                 {{
-                    "title": "Día 1: Título sugerente",
+                    "title": "Día 1: [Un título muy italiano y emocionante para este día]",
                     "pois": [
-                        {{ "name": "...", "description": "Descripción inmersiva", "image_url": "url" }}
+                        {{ "name": "Nombre real del lugar", "description": "Tu descripción generada (¡mucha chispa!)", "image_url": "url original del contexto" }}
                     ]
                 }}
             ]
         }}
-        NO INTRODUZCAS MARKDOWN, SOLO JSON PLANO COMIENZANDO CON {{.
         """
         
         gemini_resp = model.generate_content(gemini_prompt)
