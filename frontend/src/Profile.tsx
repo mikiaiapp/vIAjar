@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 function Profile() {
   const [user, setUser] = useState<any>(null);
@@ -92,7 +92,16 @@ function Profile() {
 
   return (
     <div className="app-container">
-      <div className="card glass-panel" style={{ width: '100%', maxWidth: '800px', margin: '2rem auto', padding: '2rem' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <Link to="/">
+          <img src="/logo.png" alt="vIAjar Logo" style={{ height: '50px' }} />
+        </Link>
+        <Link to="/">
+           <button className="btn-primary" style={{ background: 'transparent', color: 'var(--primary)', border: '1px solid var(--primary)' }}>← Volver</button>
+        </Link>
+      </header>
+
+      <div className="card glass-panel" style={{ width: '100%', maxWidth: '800px', margin: '0 auto', padding: '2rem' }}>
         <h2 className="text-gradient" style={{ marginBottom: '2rem' }}>Configuración de Usuario</h2>
         
         {success && <div style={{ color: 'green', marginBottom: '1rem' }}>{success}</div>}
