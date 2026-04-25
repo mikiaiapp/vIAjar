@@ -15,7 +15,7 @@ function Layout({ children }: { children: React.ReactNode }) {
   ];
 
   return (
-    <div className="app-layout" style={{ display: 'flex', minHeight: '100vh', background: 'var(--background)' }}>
+    <div className="app-layout" style={{ display: 'flex', minHeight: '100vh', background: '#f4f7f9' }}>
       {/* Sidebar */}
       <aside className="sidebar" style={{ 
         width: '280px', 
@@ -23,18 +23,17 @@ function Layout({ children }: { children: React.ReactNode }) {
         display: 'flex', 
         flexDirection: 'column', 
         gap: '3rem',
-        borderRight: '1px solid rgba(0, 0, 0, 0.05)',
+        borderRight: '1px solid rgba(0, 0, 0, 0.03)',
         position: 'sticky',
         top: 0,
         height: '100vh',
         boxSizing: 'border-box',
-        background: '#ffffff',
-        boxShadow: '4px 0 24px rgba(0, 0, 0, 0.02)',
+        background: '#f4f7f9',
         zIndex: 10
       }}>
         <div style={{ padding: '0 0.5rem', textAlign: 'center' }}>
           <Link to="/">
-            <img src="/logo.png" alt="vIAjar Logo" style={{ width: '100%', maxWidth: '220px', transition: 'transform 0.2s ease' }} />
+            <img src="/logo.png" alt="vIAjar Logo" style={{ width: '100%', maxWidth: '220px', mixBlendMode: 'multiply' }} />
           </Link>
         </div>
 
