@@ -11,6 +11,7 @@ function TripGenerator() {
     fetchTripDetails();
     const interval = setInterval(() => {
       fetchLogs();
+      fetchTripDetails();
     }, 2000);
     return () => clearInterval(interval);
   }, [tripId]);
