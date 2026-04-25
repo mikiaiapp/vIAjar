@@ -139,17 +139,22 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
         available_gemini_models = []
         for m in genai.list_models():
             if 'generateContent' in m.supported_generation_methods:
-                available_gemini_models.append(m.name)
+                # Excluir modelos especializados que fallan con prompts de texto largos
+                name = m.name.lower()
+                if "tts" not in name and "embed" not in name and "search" not in name:
+                    available_gemini_models.append(m.name)
         
         target_gemini = "models/gemini-1.5-flash"
-        if target_gemini not in available_gemini_models and "gemini-1.5-flash" not in available_gemini_models:
-            # Fallback a lo que haya (ej. gemini-pro, gemini-1.5-pro, etc)
-            flash_models = [m for m in available_gemini_models if "flash" in m.lower()]
-            pro_models = [m for m in available_gemini_models if "pro" in m.lower()]
-            if flash_models: target_gemini = flash_models[-1]
-            elif pro_models: target_gemini = pro_models[-1]
-            else: target_gemini = available_gemini_models[-1] if available_gemini_models else "models/gemini-1.5-flash"
-            add_log(db, trip.id, f"GEMINI AI: Modelo preferido no encontrado. Usando fallback {target_gemini}", "warning")
+        if target_gemini not in available_gemini_models:
+            # Priorizar versiones estables de flash o pro
+            flash_options = [m for m in available_gemini_models if "1.5-flash" in m]
+            pro_options = [m for m in available_gemini_models if "1.5-pro" in m]
+            
+            if flash_options: target_gemini = flash_options[0]
+            elif pro_options: target_gemini = pro_models[0]
+            else: target_gemini = available_gemini_models[0] if available_gemini_models else "models/gemini-1.5-flash"
+            
+            add_log(db, trip.id, f"GEMINI AI: Ajustando a modelo compatible: {target_gemini}", "warning")
 
         model = genai.GenerativeModel(target_gemini)
         
