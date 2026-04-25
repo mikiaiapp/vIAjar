@@ -50,14 +50,23 @@ function Profile() {
     }
   };
 
-  if (!user) return <div className="app-container">Cargando...</div>;
+  if (error) {
+    return (
+      <div className="app-container" style={{ textAlign: 'center', marginTop: '4rem' }}>
+        <h2 style={{ color: 'red' }}>Error</h2>
+        <p>{error}</p>
+        <button onClick={() => navigate('/login')} className="btn-primary" style={{ marginTop: '1rem' }}>Volver al Login</button>
+      </div>
+    );
+  }
+
+  if (!user) return <div className="app-container">Cargando perfil...</div>;
 
   return (
     <div className="app-container">
       <div className="card glass-panel" style={{ maxWidth: '800px', margin: '2rem auto', padding: '2rem' }}>
         <h2 className="text-gradient" style={{ marginBottom: '2rem' }}>Configuración de Usuario</h2>
         
-        {error && <div style={{ color: 'red', marginBottom: '1rem' }}>{error}</div>}
         {success && <div style={{ color: 'green', marginBottom: '1rem' }}>{success}</div>}
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
