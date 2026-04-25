@@ -180,10 +180,24 @@ async def manual_search(trip_id: int, query: str, db: Session = Depends(get_db),
     
     genai_resp = model.generate_content(prompt)
     txt = genai_resp.text.strip()
-    if "```json" in txt: txt = txt.split("```json")[-1].split("```")[0].strip()
-    elif "```" in txt: txt = txt.split("```")[1].strip()
     
-    data = json.loads(txt)
+    # Limpieza de markdown
+    if "```json" in txt:
+        txt = txt.split("```json")[-1].split("```")[0].strip()
+    elif "```" in txt:
+        txt = txt.split("```")[1].strip()
+    
+    # Intento de extracción si hay texto extra
+    if not (txt.startswith('{') and txt.endswith('}')):
+        start = txt.find('{')
+        end = txt.rfind('}')
+        if start != -1 and end != -1:
+            txt = txt[start:end+1]
+    
+    try:
+        data = json.loads(txt)
+    except:
+        return {"status": "error", "message": "Fallo al procesar respuesta de IA"}
     new_pois = []
     for p in data.get("pois", []):
         db_poi = models.POI(

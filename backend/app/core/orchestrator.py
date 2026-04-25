@@ -31,22 +31,24 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
     try:
         # FASE 1: EXTRACTION (Tavily) - Búsquedas múltiples para evitar sesgos
         target_pois = max(40, duration * 5) 
-        add_log(db, trip.id, f"TAVILY AI: Iniciando rastreo profundo de Atractivos, Hoteles y Restaurantes...")
+        add_log(db, trip.id, f"TAVILY AI: Iniciando rastreo profundo de Atractivos, Monumentos y Lugares de interés...")
         
         tavily_client = TavilyClient(api_key=user.tavily_api_key)
         all_raw_results = []
         
+        # Búsquedas en español e inglés para máxima cobertura
         queries = [
-            f"Best tourist attractions, monuments and secret spots in {trip.destination}",
-            f"Top rated hotels and accommodations in {trip.destination} for travelers",
-            f"Best restaurants and culinary experiences in {trip.destination}"
+            f"mejores monumentos, pueblos con encanto y sitios históricos para visitar en {trip.destination}",
+            f"puntos de interés turístico, miradores y parajes naturales en {trip.destination}",
+            f"best tourist attractions and hidden gems in {trip.destination} for sightseeing"
         ]
 
         for q in queries:
             try:
                 resp = tavily_client.search(query=q, search_depth="advanced", max_results=target_pois // 2, include_images=True)
                 all_raw_results.extend(resp.get("results", []))
-            except: pass
+            except Exception as e:
+                add_log(db, trip.id, f"Error en búsqueda Tavily: {str(e)}", "warn")
 
         if not all_raw_results:
             raise Exception("No se han podido localizar puntos de interés. Revisa tu clave de Tavily.")
@@ -59,7 +61,6 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
         
         model = genai.GenerativeModel("models/gemini-1.5-flash")
         
-        # Dividir resultados en bloques de 20 para que Gemini no se sature y los "tire"
         chunk_size = 20
         all_processed_pois = []
 
@@ -68,13 +69,28 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
             context = [{"title": p.get("title"), "snippet": p.get("content"), "url": p.get("url")} for p in chunk]
             
             prompt = f"""
-            Eres un experto en viajes. Analiza este BLOQUE de {len(chunk)} candidatos para el destino {trip.destination}.
-            Para CADA UNO sin excepción, genera un objeto JSON.
-            Si el lugar parece ser un HOTEL, marca category='hotel'. Si es RESTAURANTE, category='restaurant'. Si es una ATRECCIÓN, category='attraction'.
-            Necesito NOMBRE real, DESCRIPCIÓN completa (5-6 líneas), WEBSITE estimado (Booking/TripAdvisor o su web oficial), y COORDENADAS exactas (lat, lng).
+            Eres un experto guía de viajes. Analiza este BLOQUE de {len(chunk)} candidatos para el destino {trip.destination}.
+            
+            OBJETIVO: Identificar PUEBLOS de interés turístico, MONUMENTOS, MUSEOS, MIRADORES, PARQUES NATURALES y otros puntos de interés (POI).
+            
+            CRÍTICO - REGLAS DE EXCLUSIÓN:
+            - NO incluyas hoteles, hostales, apartamentos, campings ni ningún tipo de alojamiento.
+            - NO incluyas restaurantes, bares, cafeterías ni gastronomía.
+            - Ignóralos por completo. Solo queremos lugares que se "visitan".
+            
+            Para CADA lugar de interés turístico real encontrado en los datos proporcionados:
+            1. NAME: Nombre oficial en español.
+            2. DESCRIPTION: Un párrafo de 5-6 líneas cautivador sobre por qué visitarlo.
+            3. CATEGORY: 'attraction'.
+            4. WEBSITE_URL: Su web oficial o enlace informativo (TripAdvisor, Wikipedia).
+            5. LAT: Latitud decimal (ej: 40.4167).
+            6. LNG: Longitud decimal (ej: -3.7037).
+            
+            IMPORTANTE: Si no tienes coordenadas exactas, intenta estimarlas basándote en el nombre y ciudad.
+            Responde ÚNICAMENTE con un objeto JSON válido.
             
             JSON FORMAT:
-            {{ "pois": [ {{ "name": "...", "description": "...", "category": "...", "website_url": "...", "lat": 0.0, "lng": 0.0 }} ] }}
+            {{ "pois": [ {{ "name": "...", "description": "...", "category": "attraction", "website_url": "...", "lat": 0.0, "lng": 0.0 }} ] }}
             
             DATA: {json.dumps(context)}
             """
@@ -82,13 +98,34 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
             try:
                 resp = model.generate_content(prompt)
                 txt = resp.text.strip()
-                if "```json" in txt: txt = txt.split("```json")[-1].split("```")[0].strip()
-                elif "```" in txt: txt = txt.split("```")[1].strip()
+                
+                # Limpieza de markdown
+                if "```json" in txt:
+                    txt = txt.split("```json")[-1].split("```")[0].strip()
+                elif "```" in txt:
+                    txt = txt.split("```")[1].strip()
+                
+                # Intentar encontrar el primer '{' y el último '}' si falló lo anterior
+                if not (txt.startswith('{') and txt.endswith('}')):
+                    start = txt.find('{')
+                    end = txt.rfind('}')
+                    if start != -1 and end != -1:
+                        txt = txt[start:end+1]
                 
                 data = json.loads(txt)
-                all_processed_pois.extend(data.get("pois", []))
-                add_log(db, trip.id, f"Progreso IA: {len(all_processed_pois)} / {len(all_raw_results)} procesados...")
-            except: continue
+                chunk_pois = data.get("pois", [])
+                
+                # Validación básica de datos
+                valid_pois = []
+                for p in chunk_pois:
+                    if p.get("name") and p.get("lat") and p.get("lng"):
+                        valid_pois.append(p)
+                
+                all_processed_pois.extend(valid_pois)
+                add_log(db, trip.id, f"Progreso IA: {len(all_processed_pois)} lugares válidos identificados...")
+            except Exception as e:
+                add_log(db, trip.id, f"Error procesando bloque {i//chunk_size + 1}: {str(e)}", "warn")
+                continue
 
         # PERSISTENCIA
         for p in all_processed_pois:
