@@ -15,24 +15,26 @@ function Layout({ children }: { children: React.ReactNode }) {
   ];
 
   return (
-    <div className="app-layout" style={{ display: 'flex', minHeight: '100vh' }}>
+    <div className="app-layout" style={{ display: 'flex', minHeight: '100vh', background: 'var(--background)' }}>
       {/* Sidebar */}
-      <aside className="sidebar glass-panel" style={{ 
+      <aside className="sidebar" style={{ 
         width: '280px', 
-        padding: '2.5rem 1.5rem', 
+        padding: '3rem 1.5rem', 
         display: 'flex', 
         flexDirection: 'column', 
         gap: '3rem',
-        borderRight: '1px solid rgba(255, 255, 255, 0.1)',
+        borderRight: '1px solid rgba(0, 0, 0, 0.05)',
         position: 'sticky',
         top: 0,
         height: '100vh',
         boxSizing: 'border-box',
-        background: 'rgba(255, 255, 255, 0.02)'
+        background: '#ffffff',
+        boxShadow: '4px 0 24px rgba(0, 0, 0, 0.02)',
+        zIndex: 10
       }}>
         <div style={{ padding: '0 0.5rem', textAlign: 'center' }}>
           <Link to="/">
-            <img src="/logo.png" alt="vIAjar Logo" style={{ width: '100%', maxWidth: '200px', mixBlendMode: 'multiply', filter: 'contrast(1.1)' }} />
+            <img src="/logo.png" alt="vIAjar Logo" style={{ width: '100%', maxWidth: '220px', transition: 'transform 0.2s ease' }} />
           </Link>
         </div>
 
