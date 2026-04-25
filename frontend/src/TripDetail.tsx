@@ -14,12 +14,16 @@ interface POI {
   image_url: string;
   latitude?: number;
   longitude?: number;
+  status?: string;
+  category?: string;
+  website_url?: string;
 }
 
 interface Day {
   id: number;
   title: string;
   order: number;
+  accommodation?: POI | null;
   pois: { id: number; poi: POI }[];
 }
 
@@ -47,6 +51,7 @@ const TripDetail = () => {
   const markersRef = useRef<any[]>([]);
 
   const fetchTrip = async () => {
+    if (!tripId) return;
     const token = localStorage.getItem('access_token');
     try {
       const res = await fetch(`/api/trips/${tripId}`, {
@@ -55,7 +60,7 @@ const TripDetail = () => {
       if (res.ok) {
         const data = await res.json();
         setTrip(data);
-        if (data.available_pois?.length > 0 && !selectedPoi) {
+        if (data.available_pois && data.available_pois.length > 0 && !selectedPoi) {
           const firstPending = data.available_pois.find((p:any) => (p.status || 'pending') === 'pending');
           setSelectedPoi(firstPending || data.available_pois[0]);
         }
@@ -83,7 +88,7 @@ const TripDetail = () => {
         const allPois = [...(trip.available_pois || [])];
 
         allPois.forEach(poi => {
-            if (poi.latitude && poi.longitude) {
+            if (typeof poi.latitude === 'number' && typeof poi.longitude === 'number') {
                 let color = '#4f46e5'; // Blue (pending)
                 if (poi.status === 'assigned') color = '#10b981'; // Green
                 if (poi.status === 'discarded') color = '#ef4444'; // Red
@@ -106,13 +111,14 @@ const TripDetail = () => {
 
         if (coords.length > 0 && !selectedPoi) {
             mapRef.current.fitBounds(coords, { padding: [50, 50] });
-        } else if (selectedPoi?.latitude) {
+        } else if (selectedPoi && typeof selectedPoi.latitude === 'number' && typeof selectedPoi.longitude === 'number') {
             mapRef.current.setView([selectedPoi.latitude, selectedPoi.longitude], 13);
         }
     }
   }, [showMap, trip, selectedPoi]);
 
   const handleStatusUpdate = async (poiId: number, newStatus: string) => {
+    if (!tripId) return;
     const token = localStorage.getItem('access_token');
     try {
       const res = await fetch(`/api/trips/${tripId}/poi/${poiId}/status?status=${newStatus}`, {
@@ -124,9 +130,10 @@ const TripDetail = () => {
   };
 
   const handleMovePoi = async (poiId: number, dayId: number | null, isAccommodation: boolean = false) => {
+    if (!tripId) return;
     const token = localStorage.getItem('access_token');
     try {
-      const res = await fetch(`/api/trips/${tripId}/move-poi?poi_id=${poiId}${dayId ? `&day_id=${dayId}` : ''}${isAccommodation ? '&is_accommodation=true' : ''}`, {
+      const res = await fetch(`/api/trips/${tripId}/move-poi?poi_id=${poiId}${dayId !== null ? `&day_id=${dayId}` : ''}${isAccommodation ? '&is_accommodation=true' : ''}`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -135,6 +142,7 @@ const TripDetail = () => {
   };
 
   const handleSearch = async (query: string) => {
+    if (!tripId) return;
     if (!query) return;
     const token = localStorage.getItem('access_token');
     try {
@@ -147,11 +155,12 @@ const TripDetail = () => {
   };
 
   const handleExport = async (format: string) => {
+    if (!tripId) return;
     const token = localStorage.getItem('access_token');
     const res = await fetch(`/api/trips/${tripId}/export?format=${format}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
-    if (res.ok) {
+    if (res.ok && trip) {
       const text = await res.text();
       const blob = new Blob([text], { type: 'text/plain' });
       const url = window.URL.createObjectURL(blob);
@@ -177,7 +186,14 @@ const TripDetail = () => {
         const name = placemarks[i].getElementsByTagName("name")[0]?.textContent;
         const coords = placemarks[i].getElementsByTagName("coordinates")[0]?.textContent?.split(",");
         if (name && coords) {
-          data.push({ name, lng: parseFloat(coords[0]), lat: parseFloat(coords[1]), category: 'attraction' });
+          data.push({ 
+            name: name || "Lugar sin nombre", 
+            lng: parseFloat(coords[0]), 
+            lat: parseFloat(coords[1]), 
+            category: 'attraction',
+            description: 'Importado desde KML',
+            image_url: 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1'
+          });
         }
       }
     } else if (file.name.endsWith('.csv')) {
@@ -185,13 +201,23 @@ const TripDetail = () => {
       const headers = lines[0].split(',');
       for (let i = 1; i < lines.length; i++) {
         const vals = lines[i].split(',');
-        data.push({ name: vals[0], lat: parseFloat(vals[3]), lng: parseFloat(vals[4]), category: vals[2] || 'attraction' });
+        if (vals[0]) {
+          data.push({ 
+            name: vals[0], 
+            lat: parseFloat(vals[3]), 
+            lng: parseFloat(vals[4]), 
+            category: vals[2] || 'attraction',
+            description: 'Importado desde CSV',
+            image_url: 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1'
+          });
+        }
       }
     } else {
       data = JSON.parse(text);
     }
 
     const token = localStorage.getItem('access_token');
+    if (!tripId) return;
     await fetch(`/api/trips/${tripId}/import`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -204,6 +230,8 @@ const TripDetail = () => {
   if (!trip) return <div className="error-screen" style={{ padding: '4rem', textAlign: 'center' }}>Viaje no encontrado</div>;
 
   const currentDay = trip.days[currentDayIdx];
+  if (!currentDay) return <div className="error-screen" style={{ padding: '4rem', textAlign: 'center' }}>Día no encontrado</div>;
+  
   const filteredPois = trip.available_pois?.filter(p => (p.status || 'pending') === filterStatus) || [];
 
   return (
@@ -312,7 +340,7 @@ const TripDetail = () => {
                   </a>
                 )}
                 <div style={{ padding: '1rem 1.5rem', background: '#f1f5f9', borderRadius: '12px', fontSize: '0.9rem', color: '#475569', fontWeight: '500' }}>
-                  📍 {selectedPoi.latitude?.toFixed(4)}, {selectedPoi.longitude?.toFixed(4)}
+                  📍 {(selectedPoi.latitude as number)?.toFixed(4)}, {(selectedPoi.longitude as number)?.toFixed(4)}
                 </div>
               </div>
             </div>

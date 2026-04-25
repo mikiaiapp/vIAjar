@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 
 function TripGenerator() {
   const { tripId } = useParams();
@@ -17,6 +17,7 @@ function TripGenerator() {
   }, [tripId]);
 
   const fetchTripDetails = async () => {
+    if (!tripId) return;
     const token = localStorage.getItem('access_token');
     try {
       const res = await fetch(`/api/trips/${tripId}`, { headers: { 'Authorization': `Bearer ${token}` } });
@@ -25,6 +26,7 @@ function TripGenerator() {
   };
 
   const fetchLogs = async () => {
+    if (!tripId) return;
     const token = localStorage.getItem('access_token');
     try {
       const res = await fetch(`/api/trips/${tripId}/logs`, { headers: { 'Authorization': `Bearer ${token}` } });

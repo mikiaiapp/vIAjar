@@ -115,7 +115,7 @@ def orchestrate_trip_generation(db: Session, trip_id: int):
         db.commit()
                 
         trip.status = "completed"
-        add_log(db, trip.id, f"¡Fase 1 terminada! Se han descubierto {len(final_results['pois'])} lugares. Ahora puedes organizarlos a tu gusto.", "success")
+        add_log(db, trip.id, f"¡Fase 1 terminada! Se han descubierto {len(all_processed_pois)} lugares. Ahora puedes organizarlos a tu gusto.", "success")
         db.commit()
 
     except Exception as e:

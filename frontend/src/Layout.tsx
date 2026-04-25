@@ -1,8 +1,10 @@
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleLogout = () => {
     localStorage.removeItem('access_token');
@@ -14,10 +16,47 @@ function Layout({ children }: { children: React.ReactNode }) {
     { path: '/profile', label: 'Mi Perfil', icon: '⚙️' }
   ];
 
+  const closeMenu = () => setIsMobileMenuOpen(false);
+
   return (
     <div className="app-layout" style={{ display: 'flex', minHeight: '100vh', background: '#f4f7f9' }}>
+      
+      {/* Botón Flotante para Móvil */}
+      <button 
+        className="mobile-fab" 
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        style={{
+          position: 'fixed',
+          bottom: '2rem',
+          right: '2rem',
+          width: '60px',
+          height: '60px',
+          borderRadius: '50%',
+          background: 'var(--primary)',
+          color: 'white',
+          border: 'none',
+          boxShadow: '0 8px 30px rgba(0,0,0,0.2)',
+          zIndex: 2000,
+          cursor: 'pointer',
+          fontSize: '1.5rem',
+          display: 'none', // Se controla por CSS
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}
+      >
+        {isMobileMenuOpen ? '✕' : '☰'}
+      </button>
+
+      {/* Sidebar Overlay for Mobile */}
+      {isMobileMenuOpen && (
+        <div 
+          onClick={closeMenu}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(4px)', zIndex: 998 }} 
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="sidebar" style={{ 
+      <aside className={`sidebar ${isMobileMenuOpen ? 'open' : ''}`} style={{ 
         width: '280px', 
         padding: '3rem 1.5rem', 
         display: 'flex', 
@@ -29,10 +68,11 @@ function Layout({ children }: { children: React.ReactNode }) {
         height: '100vh',
         boxSizing: 'border-box',
         background: '#f4f7f9',
-        zIndex: 10
+        zIndex: 1000,
+        transition: 'transform 0.3s ease'
       }}>
         <div style={{ padding: '0 0.5rem', textAlign: 'center' }}>
-          <Link to="/">
+          <Link to="/" onClick={closeMenu}>
             <img src="/logo.png" alt="vIAjar Logo" style={{ width: '100%', maxWidth: '220px', mixBlendMode: 'multiply' }} />
           </Link>
         </div>
@@ -44,6 +84,7 @@ function Layout({ children }: { children: React.ReactNode }) {
               <Link 
                 key={item.path} 
                 to={item.path} 
+                onClick={closeMenu}
                 style={{ 
                   textDecoration: 'none', 
                   color: isActive ? 'white' : 'var(--text-secondary)',
@@ -84,7 +125,7 @@ function Layout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main Content Area */}
-      <main style={{ flex: 1, padding: '2rem 4rem', overflowY: 'auto' }}>
+      <main className="main-content" style={{ flex: 1, padding: '2rem 4rem', overflowY: 'auto' }}>
         {children}
       </main>
     </div>

@@ -64,3 +64,80 @@ h1, h2, h3, h4, h5, h6 {
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
+.btn-mini {
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: #475569;
+  transition: all 0.2s;
+}
+
+.btn-mini:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.loading-screen {
+  font-family: 'Outfit', sans-serif;
+  color: var(--primary);
+}
+
+/* Responsive Layout */
+@media (max-width: 992px) {
+  .sidebar {
+    position: fixed !important;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    transform: translateX(-100%);
+    box-shadow: 10px 0 30px rgba(0,0,0,0.1);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .main-content {
+    padding: 1rem !important;
+  }
+
+  .mobile-fab {
+    display: flex !important;
+  }
+  
+  .trip-engine {
+    flex-direction: column !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  
+  .col-discovery, .col-details, .col-planner {
+    width: 100% !important;
+    height: auto !important;
+    max-width: none !important;
+    border-right: none !important;
+    border-bottom: 2px solid rgba(0,0,0,0.05) !important;
+  }
+  
+  .content-scroll, .planner-scroll {
+    height: auto !important;
+    min-height: 400px;
+    max-height: 600px;
+  }
+
+  .top-bar {
+    flex-direction: column;
+    align-items: flex-start !important;
+    padding: 1rem !important;
+    gap: 1rem !important;
+  }
+
+  .top-bar input {
+    width: 100% !important;
+  }
+}
