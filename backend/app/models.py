@@ -11,6 +11,8 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     full_name = Column(String)
     is_active = Column(Boolean, default=True)
+    is_2fa_enabled = Column(Boolean, default=False)
+    totp_secret = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # API Keys configurables por el usuario

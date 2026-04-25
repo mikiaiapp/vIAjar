@@ -13,3 +13,5 @@ httpx
 pydantic
 pydantic-settings
 email-validator
+pyotp
+qrcode[pil]

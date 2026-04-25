@@ -1,13 +1,33 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
 function Home() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    setIsLoggedIn(!!token);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('access_token');
+    setIsLoggedIn(false);
+  };
+
   return (
     <div className="app-container">
       <header>
         <nav className="top-nav">
-          <Link to="/login">
-            <button className="btn-primary">Iniciar Sesión</button>
-          </Link>
+          {isLoggedIn ? (
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+               <Link to="/profile" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>Mi Perfil</Link>
+               <button onClick={handleLogout} className="btn-primary" style={{ background: 'transparent', color: 'var(--primary)', border: '1px solid var(--primary)' }}>Cerrar Sesión</button>
+            </div>
+          ) : (
+            <Link to="/login">
+              <button className="btn-primary">Iniciar Sesión</button>
+            </Link>
+          )}
         </nav>
       </header>
 
@@ -28,9 +48,9 @@ function Home() {
               y planifica tus rutas día a día de forma completamente automática.
             </p>
 
-            <Link to="/register">
+            <Link to={isLoggedIn ? "/dashboard" : "/register"}>
               <button className="btn-primary" style={{ padding: '16px 32px', fontSize: '1.1rem', marginTop: '1rem' }}>
-                Crear Nuevo Viaje
+                {isLoggedIn ? "Ir a mis viajes" : "Crear Nuevo Viaje"}
               </button>
             </Link>
           </div>
