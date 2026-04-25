@@ -68,3 +68,13 @@ async def get_trip_logs(trip_id: int, db: Session = Depends(get_db), current_use
         raise HTTPException(status_code=404, detail="Viaje no encontrado")
     logs = db.query(models.TripLog).filter(models.TripLog.trip_id == trip_id).order_by(models.TripLog.created_at.asc()).all()
     return logs
+
+@router.delete("/{trip_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_trip(trip_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    trip = db.query(models.Trip).filter(models.Trip.id == trip_id, models.Trip.owner_id == current_user.id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Viaje no encontrado")
+    
+    db.delete(trip)
+    db.commit()
+    return None

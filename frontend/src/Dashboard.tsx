@@ -53,6 +53,31 @@ function Dashboard() {
     }
   };
 
+  const [tripToDelete, setTripToDelete] = useState<any>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
+
+  const handleDeleteTrip = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (deleteConfirmation.toLowerCase() !== 'borrar') return;
+    
+    const token = localStorage.getItem('access_token');
+    try {
+      const res = await fetch(`/api/trips/${tripToDelete.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setTripToDelete(null);
+        setDeleteConfirmation('');
+        fetchTrips();
+      } else {
+        alert("Error al borrar el viaje");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   return (
     <div className="app-container" style={{ padding: 0 }}>
       <main style={{ alignItems: 'stretch' }}>
@@ -100,8 +125,9 @@ function Dashboard() {
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '2rem' }}>
             {trips.map(trip => (
-              <div key={trip.id} className="card glass-panel" style={{ width: '100%' }}>
-                <h3 style={{ fontSize: '1.4rem', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>{trip.title}</h3>
+              <div key={trip.id} className="card glass-panel" style={{ width: '100%', position: 'relative' }}>
+                <button onClick={() => setTripToDelete(trip)} style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', opacity: 0.5 }}>🗑️</button>
+                <h3 style={{ fontSize: '1.4rem', color: 'var(--text-primary)', marginBottom: '0.5rem', paddingRight: '2rem' }}>{trip.title}</h3>
                 <p style={{ color: 'var(--primary)', fontWeight: 500, marginBottom: '1rem' }}>📍 {trip.destination}</p>
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
                   <span>Inicio: {trip.start_date}</span>
@@ -112,6 +138,30 @@ function Dashboard() {
                 </button>
               </div>
             ))}
+          </div>
+        )}
+
+        {tripToDelete && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div className="card glass-panel" style={{ padding: '2rem', maxWidth: '400px', width: '100%' }}>
+              <h3 style={{ color: '#ff4d4f', marginBottom: '1rem', fontSize: '1.5rem' }}>⚠️ Atención</h3>
+              <p style={{ marginBottom: '1.5rem' }}>Estás a punto de borrar irremediablemente el viaje <strong>{tripToDelete.title}</strong>.</p>
+              <form onSubmit={handleDeleteTrip}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Para continuar, escribe <strong>borrar</strong>:</label>
+                <input 
+                  type="text" 
+                  autoFocus
+                  required
+                  value={deleteConfirmation}
+                  onChange={e => setDeleteConfirmation(e.target.value)}
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--surface-border)', marginBottom: '1.5rem' }} 
+                />
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                  <button type="button" onClick={() => { setTripToDelete(null); setDeleteConfirmation(''); }} style={{ flex: 1, padding: '0.75rem', borderRadius: '8px', background: 'transparent', border: '1px solid var(--surface-border)', color: 'white', cursor: 'pointer' }}>Cancelar</button>
+                  <button type="submit" disabled={deleteConfirmation.toLowerCase() !== 'borrar'} style={{ flex: 1, padding: '0.75rem', borderRadius: '8px', background: deleteConfirmation.toLowerCase() === 'borrar' ? '#ff4d4f' : 'rgba(255, 77, 79, 0.3)', border: 'none', color: 'white', cursor: deleteConfirmation.toLowerCase() === 'borrar' ? 'pointer' : 'not-allowed', fontWeight: 600 }}>Eliminar</button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
       </main>
