@@ -18,20 +18,21 @@ function Layout({ children }: { children: React.ReactNode }) {
     <div className="app-layout" style={{ display: 'flex', minHeight: '100vh' }}>
       {/* Sidebar */}
       <aside className="sidebar glass-panel" style={{ 
-        width: '250px', 
-        padding: '2rem 1rem', 
+        width: '280px', 
+        padding: '2.5rem 1.5rem', 
         display: 'flex', 
         flexDirection: 'column', 
-        gap: '2rem',
+        gap: '3rem',
         borderRight: '1px solid rgba(255, 255, 255, 0.1)',
         position: 'sticky',
         top: 0,
         height: '100vh',
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        background: 'rgba(255, 255, 255, 0.02)'
       }}>
-        <div style={{ padding: '0 1rem' }}>
+        <div style={{ padding: '0 0.5rem', textAlign: 'center' }}>
           <Link to="/">
-            <img src="/logo.png" alt="vIAjar Logo" style={{ width: '100%', maxWidth: '150px' }} />
+            <img src="/logo.png" alt="vIAjar Logo" style={{ width: '100%', maxWidth: '200px', mixBlendMode: 'multiply', filter: 'contrast(1.1)' }} />
           </Link>
         </div>
 
