@@ -61,3 +61,4 @@ Una vez terminado, podrás acceder a la aplicación web a través de la IP de tu
 - Generación automática de Puntos de Interés (POIs) combinando Tavily (Búsqueda web) y LLMs (Gemini, Groq) con sistema de fallback.
 - Visualización de rutas en mapa (Leaflet + OpenStreetMap).
 - Exportación en formato PDF estilo revista.
+- En el móvil, deslizar hacia abajo desde arriba para actualizar la página.
