@@ -1,5 +1,9 @@
 # vIAjar 🌍🤖
 
+<p align="center"><img src="https://img.shields.io/badge/ESTADO-EN%20DESARROLLO-red?style=for-the-badge" alt="Estado: en desarrollo" /></p>
+
+> 🚧 **En desarrollo:** la aplicación todavía no está terminada; las funciones y la interfaz pueden cambiar.
+
 vIAjar (un juego de palabras entre "Viajar" e "IA") es una aplicación web full-stack diseñada para generar, gestionar y exportar guías de viaje detalladas y visuales de forma completamente automática mediante Inteligencia Artificial.
 
 ## 🧱 Arquitectura y Stack Tecnológico
